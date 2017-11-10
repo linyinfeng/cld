@@ -17,14 +17,6 @@ TcpStream::~TcpStream()
     close();
 }
 
-int TcpStream::fileDescriptor()
-{
-    if (fd != -1)
-        return fd;
-    else
-        throw std::runtime_error("Access invalid stream file descriptor");
-}
-
 void TcpStream::connect(const AddressInfo &address)
 {
     for (const struct addrinfo &ai : address) {
@@ -50,12 +42,12 @@ void TcpStream::close()
     }
 }
 
-bool TcpStream::opened()
+bool TcpStream::opened() const
 {
     return fd != -1;
 }
 
-bool TcpStream::closed()
+bool TcpStream::closed() const
 {
     return fd == -1;
 }
@@ -72,25 +64,6 @@ void TcpStream::readFill(Buffer<std::byte> &buf) {
     buf.setValid(0);
     std::size_t read_count = wrapper::ReadN(fd, buf.data(), buf.size());
     buf.setValid(read_count);
-}
-
-std::string TcpStream::readLine() {
-    std::string res;
-    Buffer<std::byte> buf(1);
-    while (true) {
-        readFill(buf);
-        if (buf.valid() == 1) {
-            char c = *reinterpret_cast<char *>(buf.data());
-            res.push_back(c);
-            if (c == '\n')
-                break;
-        }
-    }
-    return res;
-}
-
-void TcpStream::write(Buffer<std::byte> &buf) {
-    write(buf.data(), buf.valid());
 }
 
 void TcpStream::write(std::byte *buf, std::size_t size) {

@@ -1,34 +1,31 @@
-#ifndef CLD_TcpStream_H_INCLUDED
-#define CLD_TcpStream_H_INCLUDED
+#ifndef CLD_TCP_STREAM_H_INCLUDED
+#define CLD_TCP_STREAM_H_INCLUDED
 
 #include <cstddef>
 #include "address_info.h"
 #include "buffer.h"
+#include "stream.h"
 
 namespace cld {
 
 namespace transport {
 
 // A network TcpTcpStream with a seperated buffer
-class TcpStream {
+class TcpStream : Stream {
 public:
     TcpStream() : fd(-1) { }
     TcpStream(const AddressInfo &address);
-    ~TcpStream();
+    virtual ~TcpStream();
 
-    int fileDescriptor();
+    virtual void read(Buffer<std::byte> &buf) override;
+    virtual void readFill(Buffer<std::byte> &buf) override;
+    virtual void write(std::byte *buf, std::size_t size) override;
 
-    void read(Buffer<std::byte> &buf);
-    void readFill(Buffer<std::byte> &buf);
-    std::string readLine();
-    void write(Buffer<std::byte> &buf);
-    void write(std::byte *buf, std::size_t size);
+    virtual void connect(const AddressInfo &address) override;
+    virtual void close() override;
 
-    void connect(const AddressInfo &address);
-    void close();
-
-    bool opened();
-    bool closed();
+    virtual bool opened() const override;
+    virtual bool closed() const override;
 
 private:
     int fd;

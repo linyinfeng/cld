@@ -12,7 +12,7 @@ add_executable(
     options.cpp
     request.cpp
     tcp_stream.cpp
-    #stream.cpp
+    stream.cpp
     url.cpp
     version.cpp
     wrapper.cpp
