@@ -1,4 +1,5 @@
 #include "wrapper.h"
+#include <cstddef>
 
 namespace cld {
 
@@ -35,14 +36,14 @@ int Pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
     return res;
 }
 
-std::size_t Read(int fd, void *buf, std::size_t count) {
+std::size_t Read(int fd, std::byte *buf, std::size_t count) {
     ssize_t res = read(fd, buf, count);
     if (res == -1)
         throw std::system_error(errno, std::system_category());
     return (std::size_t)res;
 }
 
-std::size_t Write(int fd, const void *buf, std::size_t count) {
+std::size_t Write(int fd, const std::byte *buf, std::size_t count) {
     ssize_t res = write(fd, buf, count);
     if (res == -1)
         throw std::system_error(errno, std::system_category());
@@ -76,7 +77,7 @@ std::size_t Readline(int fd, char *buf, std::size_t max) {
     return i;
 }
 
-std::size_t ReadN(int fd, char *buf, std::size_t count) {
+std::size_t ReadN(int fd, std::byte *buf, std::size_t count) {
     std::size_t left = count;
     while (left > 0) {
         ssize_t read_count;
@@ -95,7 +96,7 @@ std::size_t ReadN(int fd, char *buf, std::size_t count) {
     return count - left;
 }
 
-std::size_t WriteN(int fd, const char *buf, std::size_t count) {
+void WriteN(int fd, const std::byte *buf, std::size_t count) {
     std::size_t left = count;
     while (left > 0) {
         ssize_t written;
@@ -109,7 +110,6 @@ std::size_t WriteN(int fd, const char *buf, std::size_t count) {
         left -= written;
         buf += written;
     }
-    return count;
 }
 
 void Close(int fd) {

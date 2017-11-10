@@ -8,7 +8,7 @@ namespace cld {
 
 void PrintHelp();
 
-void Cld(Options options, Url initial_url);
+void Cld(const Options &options, const Url &initial_url);
 
 void FollowRedirects(); // TODO Follow redirects
 void Download();        // TODO Download

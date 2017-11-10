@@ -16,7 +16,7 @@ void PrintHelp()
         << std::endl;
 }
 
-void Cld(Options options, Url initial_url)
+void Cld(const Options &options, const Url &initial_url)
 {
     // For test
     AddressInfo address_info(initial_url);

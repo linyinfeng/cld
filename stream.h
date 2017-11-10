@@ -1,6 +1,7 @@
 #ifndef CLD_STREAM_H_INCLUDED
 #define CLD_STREAM_H_INCLUDED
 
+#include <cstddef>
 #include "address_info.h"
 #include "buffer.h"
 
@@ -18,7 +19,7 @@ public:
     void read(Buffer<std::byte> &buf);
     void readFill(Buffer<std::byte> &buf);
     void write(Buffer<std::byte> &buf);
-    void write(char *buf);
+    void write(std::byte *buf, std::size_t size);
 
     void connect(const AddressInfo &address);
     void close();

@@ -58,4 +58,27 @@ bool Stream::closed()
     return fd == -1;
 }
 
+void Stream::read(Buffer<std::byte> &buf) {
+    if (fd == -1) throw std::runtime_error("Read from closed stream");
+    buf.setValid(0);
+    std::size_t read_count = wrapper::Read(fd, buf.data(), buf.size());
+    buf.setValid(read_count);
+}
+
+void Stream::readFill(Buffer<std::byte> &buf) {
+    if (fd == -1) throw std::runtime_error("Read from closed stream");
+    buf.setValid(0);
+    std::size_t read_count = wrapper::ReadN(fd, buf.data(), buf.size());
+    buf.setValid(read_count);
+}
+
+void Stream::write(Buffer<std::byte> &buf) {
+    write(buf.data(), buf.valid());
+}
+
+void Stream::write(std::byte *buf, std::size_t size) {
+    if (fd == -1) throw std::runtime_error("Write to closed stream");
+    wrapper::WriteN(fd, buf, size);
+}
+
 }

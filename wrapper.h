@@ -5,6 +5,7 @@
 #include <system_error>
 #include <cerrno>
 #include <string>
+#include <cstddef>
 
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -26,11 +27,11 @@ extern int Pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds
     const sigset_t *sigmask);
 
 /* unistd.h */
-extern std::size_t Read(int fd, void *buf, std::size_t count);
-extern std::size_t Write(int fd, const void *buf, std::size_t count);
+extern std::size_t Read(int fd, std::byte *buf, std::size_t count);
+extern std::size_t Write(int fd, const std::byte *buf, std::size_t count);
 extern std::size_t Readline(int fd, char *buf, std::size_t max);
-extern std::size_t ReadN(int fd, char *buf, std::size_t count);
-extern std::size_t WriteN(int fd, const char *buf, std::size_t count);
+extern std::size_t ReadN(int fd, std::byte *buf, std::size_t count);
+extern void WriteN(int fd, const std::byte *buf, std::size_t count);
 extern void Close(int fd);
 
 /* netdb.h */

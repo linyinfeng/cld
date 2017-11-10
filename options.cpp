@@ -29,6 +29,7 @@ Options &Options::setConnectionsNumber(int n)
 
 Options & Options::setUserAgent(const std::string & str)
 {
+    if (str.empty()) throw std::runtime_error("Empty user agent");
     user_agent = str;
     return *this;
 }
@@ -40,6 +41,15 @@ Options & Options::addExtraHeader(const std::string & str)
     }
     else {
         throw std::invalid_argument("Empty header");
+    }
+    return *this;
+}
+
+Options & Options::addExtraHeader(const std::string &name, const std::string &value) {
+    if (name.empty() || value.empty()) {
+        throw std::invalid_argument("Empty header name or value");
+    } else {
+        extra_headers.insert(std::make_pair(name, value));
     }
     return *this;
 }

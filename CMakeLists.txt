@@ -8,7 +8,7 @@ add_executable(
     cld
     address_info.cpp
     cld.cpp
-    error.cpp
+    http.cpp
     main.cpp
     options.cpp
     stream.cpp
