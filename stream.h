@@ -18,6 +18,7 @@ public:
 
     void read(Buffer<std::byte> &buf);
     void readFill(Buffer<std::byte> &buf);
+    std::string readLine();
     void write(Buffer<std::byte> &buf);
     void write(std::byte *buf, std::size_t size);
 

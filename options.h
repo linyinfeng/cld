@@ -1,6 +1,8 @@
 #ifndef CLD_OPTIONS_H_INCLUDED
 #define CLD_OPTIONS_H_INCLUDED
 
+#include "version.h"
+
 #include <string>
 #include <iostream>
 #include <map>
@@ -19,7 +21,7 @@ private:
 public:
     Options() {
         setConnectionsNumber(8);
-        setUserAgent("Cld");
+        setUserAgent("Cld/" + kCldVersion);
     }
 
     int getConnectionsNumber() const { return connections_number; }

@@ -13,5 +13,6 @@ add_executable(
     request.cpp
     stream.cpp
     url.cpp
+    version.cpp
     wrapper.cpp
 )
