@@ -8,9 +8,9 @@ add_executable(
     cld
     address_info.cpp
     cld.cpp
-    http.cpp
     main.cpp
     options.cpp
+    request.cpp
     stream.cpp
     url.cpp
     wrapper.cpp

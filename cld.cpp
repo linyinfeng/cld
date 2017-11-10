@@ -1,5 +1,6 @@
 #include <iostream>
 #include "address_info.h"
+#include "request.h"
 #include "cld.h"
 
 namespace cld {
@@ -21,6 +22,8 @@ void Cld(const Options &options, const Url &initial_url)
     // For test
     AddressInfo address_info(initial_url);
     address_info.debugInfo(std::cout);
+    http::Request request("Head", initial_url, options);
+    request.debugInfo(std::cout);
 }
 
 }
