@@ -1,21 +1,23 @@
-#include "stream.h"
+#include "tcp_stream.h"
 #include "wrapper.h"
 
 #include <stdexcept>
 
 namespace cld {
 
-Stream::Stream(const AddressInfo &address)
+namespace transport {
+
+TcpStream::TcpStream(const AddressInfo &address)
 {
     connect(address);
 }
 
-Stream::~Stream()
+TcpStream::~TcpStream()
 {
     close();
 }
 
-int Stream::fileDescriptor()
+int TcpStream::fileDescriptor()
 {
     if (fd != -1)
         return fd;
@@ -23,7 +25,7 @@ int Stream::fileDescriptor()
         throw std::runtime_error("Access invalid stream file descriptor");
 }
 
-void Stream::connect(const AddressInfo &address)
+void TcpStream::connect(const AddressInfo &address)
 {
     for (const struct addrinfo &ai : address) {
         try {
@@ -40,7 +42,7 @@ void Stream::connect(const AddressInfo &address)
         throw std::runtime_error("Failed to connect");
 }
 
-void Stream::close()
+void TcpStream::close()
 {
     if (fd != -1) {
         wrapper::Close(fd);
@@ -48,31 +50,31 @@ void Stream::close()
     }
 }
 
-bool Stream::opened()
+bool TcpStream::opened()
 {
     return fd != -1;
 }
 
-bool Stream::closed()
+bool TcpStream::closed()
 {
     return fd == -1;
 }
 
-void Stream::read(Buffer<std::byte> &buf) {
+void TcpStream::read(Buffer<std::byte> &buf) {
     if (fd == -1) throw std::runtime_error("Read from closed stream");
     buf.setValid(0);
     std::size_t read_count = wrapper::Read(fd, buf.data(), buf.size());
     buf.setValid(read_count);
 }
 
-void Stream::readFill(Buffer<std::byte> &buf) {
+void TcpStream::readFill(Buffer<std::byte> &buf) {
     if (fd == -1) throw std::runtime_error("Read from closed stream");
     buf.setValid(0);
     std::size_t read_count = wrapper::ReadN(fd, buf.data(), buf.size());
     buf.setValid(read_count);
 }
 
-std::string Stream::readLine() {
+std::string TcpStream::readLine() {
     std::string res;
     Buffer<std::byte> buf(1);
     while (true) {
@@ -87,13 +89,15 @@ std::string Stream::readLine() {
     return res;
 }
 
-void Stream::write(Buffer<std::byte> &buf) {
+void TcpStream::write(Buffer<std::byte> &buf) {
     write(buf.data(), buf.valid());
 }
 
-void Stream::write(std::byte *buf, std::size_t size) {
+void TcpStream::write(std::byte *buf, std::size_t size) {
     if (fd == -1) throw std::runtime_error("Write to closed stream");
     wrapper::WriteN(fd, buf, size);
 }
 
-}
+} // namespace transport
+
+} // namespace cld

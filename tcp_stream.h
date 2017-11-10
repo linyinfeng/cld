@@ -1,5 +1,5 @@
-#ifndef CLD_STREAM_H_INCLUDED
-#define CLD_STREAM_H_INCLUDED
+#ifndef CLD_TcpStream_H_INCLUDED
+#define CLD_TcpStream_H_INCLUDED
 
 #include <cstddef>
 #include "address_info.h"
@@ -7,12 +7,14 @@
 
 namespace cld {
 
-// A network stream with a seperated buffer
-class Stream {
+namespace transport {
+
+// A network TcpTcpStream with a seperated buffer
+class TcpStream {
 public:
-    Stream() : fd(-1) { }
-    Stream(const AddressInfo &address);
-    ~Stream();
+    TcpStream() : fd(-1) { }
+    TcpStream(const AddressInfo &address);
+    ~TcpStream();
 
     int fileDescriptor();
 
@@ -32,6 +34,8 @@ private:
     int fd;
 };
 
-}
+} // namespace transport
+
+} // namespace cld
 
 #endif
