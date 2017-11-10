@@ -12,7 +12,7 @@ class Buffer {
 public:
     Buffer(std::size_t s, const Alloc &alloc = Alloc()) : allocator(alloc) {
         if (s < 1) {
-            throw std::logic_error(std::string("Invalid buffer size ") + s);
+            throw std::logic_error(std::string("Invalid buffer size ") + std::to_string(s));
         }
         size_ = s;
         valid_ = 0;
@@ -22,7 +22,7 @@ public:
     Buffer(Buffer &&other) noexcept {
         size_ = other.size_;
         data_ = other.data_;
-        valid = other.valid_;
+        valid_ = other.valid_;
         other.data_ = nullptr;
         other.valid_ = 0;
         other.size_ = 0;
@@ -32,7 +32,7 @@ public:
     Buffer &operator=(Buffer &&other) noexcept {
         size_ = other.size_;
         data_ = other.data_;
-        valid = other.valid_;
+        valid_ = other.valid_;
         other.data_ = nullptr;
         other.valid_ = 0;
         other.size_ = 0;
