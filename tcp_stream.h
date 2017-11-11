@@ -11,15 +11,14 @@ namespace cld {
 namespace transport {
 
 // A network TcpTcpStream with a seperated buffer
-class TcpStream : Stream {
+class TcpStream : public Stream {
 public:
     TcpStream() : fd(-1) { }
     TcpStream(const AddressInfo &address);
     virtual ~TcpStream();
 
-    virtual void read(Buffer<std::byte> &buf) override;
-    virtual void readFill(Buffer<std::byte> &buf) override;
-    virtual void write(std::byte *buf, std::size_t size) override;
+    virtual std::size_t read(std::byte *buf, std::size_t size) override;
+    virtual void write(const std::byte *buf, std::size_t size) override;
 
     virtual void connect(const AddressInfo &address) override;
     virtual void close() override;

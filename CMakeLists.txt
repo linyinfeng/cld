@@ -10,9 +10,10 @@ add_executable(
     cld.cpp
     main.cpp
     options.cpp
-    request.cpp
-    tcp_stream.cpp
+    http_request.cpp
+    http_response.cpp
     stream.cpp
+    tcp_stream.cpp
     url.cpp
     version.cpp
     wrapper.cpp

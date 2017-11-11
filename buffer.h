@@ -44,9 +44,11 @@ public:
     void setValid(std::size_t valid) { valid_ = valid; }
 
     operator T *() { return data_; }
-    std::size_t size() { return size_; }
-    std::size_t valid() { return valid_; }
+    std::size_t size() const { return size_; }
+    std::size_t valid() const { return valid_; }
     T *data() { return data_; }
+    const T *data() const { return data_; }
+    T &operator[](std::size_t pos) { return data_[pos]; }
 
 private:
     std::size_t valid_;

@@ -7,11 +7,11 @@ namespace cld {
 Url::Url(const std::string & url_string)
 {
     std::smatch matches;
-    std::regex normal_url_regex(
+    static std::regex normal_url_regex(
         //      Scheme:         / / host            :port      /path                                  ?query                                    #fragment
         R"regex((?:([\w+.-]*):)?\/\/([A-Za-z0-9.-]*)(?::(\d+))?(?:\/([a-zA-Z0-9._~!$&'()*+,;=:@%-]*))?(?:\?([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?(?:#([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?)regex"
     );
-    std::regex ipv6_url_regex(
+    static std::regex ipv6_url_regex(
         //      Scheme:         / /   ip                :port      /path                                  ?query                                    #fragment
         R"regex((?:([\w+.-]*):)?\/\/\[([A-Za-z0-9:%]*)\](?::(\d+))?(?:\/([a-zA-Z0-9._~!$&'()*+,;=:@%-]*))?(?:\?([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?(?:#([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?)regex"
     );
