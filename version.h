@@ -3,6 +3,10 @@
 
 #include <string>
 
+namespace cld {
+
 extern const std::string kCldVersion;
+
+}
 
 #endif

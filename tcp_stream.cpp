@@ -3,8 +3,7 @@
 
 #include <stdexcept>
 
-namespace cld {
-namespace transport {
+namespace cld::transport {
 
 TcpStream::TcpStream(const AddressInfo &address)
 {
@@ -51,15 +50,14 @@ bool TcpStream::closed() const
     return fd == -1;
 }
 
-std::size_t TcpStream::read(std::byte *buf, std::size_t size) {
+std::size_t TcpStream::_read(std::byte *buf, std::size_t size) {
     if (fd == -1) throw std::runtime_error("Read from closed stream");
     return wrapper::ReadN(fd, buf, size);
 }
 
-void TcpStream::write(const std::byte *buf, std::size_t size) {
+void TcpStream::_write(const std::byte *buf, std::size_t size) {
     if (fd == -1) throw std::runtime_error("Write to closed stream");
     wrapper::WriteN(fd, buf, size);
 }
 
-} // namespace transport
-} // namespace cld
+} // namespace cld::transport

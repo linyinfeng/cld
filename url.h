@@ -44,6 +44,6 @@ private:
 extern std::istream &operator>> (std::istream &is, Url &url);
 extern std::ostream &operator<< (std::ostream &os, Url &url);
 
-}
+} // namespace cld
 
 #endif

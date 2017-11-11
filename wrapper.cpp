@@ -1,9 +1,7 @@
 #include "wrapper.h"
 #include <cstddef>
 
-namespace cld {
-
-namespace wrapper {
+namespace cld::wrapper {
 
 int Socket(int domain, int type, int protocol)
 {
@@ -175,6 +173,4 @@ in_port_t GetPort(const struct sockaddr *sa)
     }
 }
 
-} // namespace cld
-
-} // namespace wrapper
+} // namespace cld::wrapper

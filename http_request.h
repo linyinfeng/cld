@@ -11,8 +11,7 @@
 #include <map>
 #include <algorithm>
 
-namespace cld {
-namespace http {
+namespace cld::http {
 
 class Request;
 
@@ -35,6 +34,7 @@ public:
     void setbody(const std::vector<std::byte> &body) { this->body = body; }
 
     std::string &operator[](const std::string &header) { return headers[header]; }
+    const std::string &at(const std::string &header) const { return headers.at(header); }
     const std::string &operator[](const std::string &header) const { return headers.at(header); }
     std::byte &operator[](std::size_t pos) { return body[pos]; }
     const std::byte &operator[](std::size_t pos) const { return body[pos]; }
@@ -50,7 +50,6 @@ private:
     static const std::string kHttpVersion;
 };
 
-} // namespace http
-} // namespace cld
+} // namespace cld::http
 
 #endif

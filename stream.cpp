@@ -1,43 +1,47 @@
 #include "stream.h"
 
-namespace cld {
-namespace transport {
+namespace cld::transport {
+
+void Stream::write(const std::byte *buf, std::size_t size) {
+    _write(buf, size);
+}
 
 void Stream::write(const std::string &string) {
-    write(reinterpret_cast<const std::byte *>(string.c_str()), string.length());
+    _write(reinterpret_cast<const std::byte *>(string.c_str()), string.length());
 }
 
 void Stream::write(const std::vector<std::byte> &buf) {
-    write(buf.data(), buf.size());
+    _write(buf.data(), buf.size());
+}
+
+std::size_t Stream::read(std::byte *buf, std::size_t size) {
+    return _read(buf, size);
 }
 
 std::size_t Stream::read(Buffer<std::byte> &buf) {
-    return read(buf, buf.size());
-}
-
-std::size_t Stream::read(Buffer<std::byte> &buf, std::size_t limit) {
-    if (limit > buf.size()) throw std::logic_error("read limit beyond buffer size");
-    buf.setValid(0);
-    std::size_t read_count = read(buf.data(), limit);
-    buf.setValid(read_count);
-    return read_count;
+    buf.clear();
+    auto count = _read(buf.data(), buf.maxRead());
+    buf.makeValid(count);
+    return count;
 }
 
 std::size_t Stream::read(char *buf, std::size_t count) {
-    return read(reinterpret_cast<std::byte *>(buf), count);
+    return _read(reinterpret_cast<std::byte *>(buf), count);
 }
 
 std::string Stream::readLine() {
     std::string res;
     while (true) {
         char c;
-        if (read(&c, 1) == 1 && c != '\n')
+        if (_read(reinterpret_cast<std::byte *>(&c), 1) == 1) {
             res.push_back(c);
-        else
+            if (c == '\n')
+                break;
+        } else {
             break;
+        }
     }
     return res;
 }
 
-} // namespace transport
-} // namespace cld
+} // namespace cld::transport

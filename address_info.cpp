@@ -72,4 +72,4 @@ AddressInfoIterator AddressInfoIterator::operator++(int)
     return *this;
 }
 
-}
+} // namespace cld

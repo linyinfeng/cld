@@ -1,21 +1,22 @@
-#include "http_request.h"
-
 #include <string>
 #include <map>
 #include <cstdlib>
 #include <sstream>
 
+#include "http_request.h"
+
 #include "url.h"
 #include "options.h"
 #include "stream.h"
 
-namespace cld {
-namespace http {
+namespace cld::http {
 
 const std::string Request::kHttpVersion("1.1");
 
 void Write(const Request &request, transport::Stream &s) {
     s.write(request.getNonBody() + "\r\n");
+    std::cout << "[Debug] Send request:\n";
+    std::cout << request.getNonBody();
     s.write(request.getBody());
 }
 
@@ -49,5 +50,4 @@ std::ostream &Request::debugInfo(std::ostream &os) const {
     return os << std::endl;
 }
 
-} // namespace http
-} // namespace cld
+} // namespace cld::http

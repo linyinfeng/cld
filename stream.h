@@ -7,8 +7,7 @@
 #include "address_info.h"
 #include "buffer.h"
 
-namespace cld {
-namespace transport {
+namespace cld::transport {
 
 // A network TcpTcpStream with a seperated buffer
 class Stream {
@@ -17,13 +16,12 @@ public:
     virtual ~Stream() { };
 
     // all read method read system buffer to empty
-    virtual std::size_t read(std::byte *buf, std::size_t count) = 0;
+    virtual std::size_t read(std::byte *buf, std::size_t count);
     virtual std::size_t read(Buffer<std::byte> &buf);
-    virtual std::size_t read(Buffer<std::byte> &buf, std::size_t limit);
     virtual std::size_t read(char *buf, std::size_t count);
     virtual std::string readLine();
     // all write method must wirte all data
-    virtual void write(const std::byte *buf, std::size_t size) = 0;
+    virtual void write(const std::byte *buf, std::size_t size);
     virtual void write(const std::string &string);
     virtual void write(const std::vector<std::byte> &buf);
 
@@ -32,9 +30,12 @@ public:
 
     virtual bool opened() const = 0;
     virtual bool closed() const = 0;
+
+protected:
+    virtual void _write(const std::byte *buf, std::size_t size) = 0;
+    virtual std::size_t _read(std::byte *buf, std::size_t count) = 0;
 };
 
-} // namespace transport
-} // namespace cld
+} // namespace cld::transport
 
 #endif

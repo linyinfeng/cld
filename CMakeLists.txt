@@ -10,6 +10,7 @@ add_executable(
     cld.cpp
     main.cpp
     options.cpp
+    http.cpp
     http_request.cpp
     http_response.cpp
     stream.cpp

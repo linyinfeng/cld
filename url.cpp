@@ -84,4 +84,4 @@ std::ostream & operator<<(std::ostream & os, Url & url)
     return os << url.string();
 }
 
-}
+} // namespace cld

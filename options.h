@@ -38,6 +38,6 @@ public:
     std::ostream &debugInfo(std::ostream &os);
 };
 
-}
+} // namespace cld
 
 #endif

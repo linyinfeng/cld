@@ -80,7 +80,7 @@ private:
     struct addrinfo *ai;
 };
 
-}
+} // namespace cld
 
 #endif
 

@@ -75,4 +75,4 @@ std::ostream &Options::debugInfo(std::ostream &os)
     return os << std::endl;
 }
 
-}
+} // namespace cld

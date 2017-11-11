@@ -1,10 +1,13 @@
 #include <iostream>
 #include <memory>
-#include "tcp_stream.h"
+#include <sstream>
+#include <fstream>
 #include "address_info.h"
-#include "http_request.h"
-#include "cld.h"
+#include "buffer.h"
 #include "stream.h"
+#include "tcp_stream.h"
+#include "http.h"
+#include "cld.h"
 
 namespace cld {
 
@@ -25,17 +28,33 @@ void Cld(const Options &options, const Url &initial_url)
     // For test
     AddressInfo address_info(initial_url);
     address_info.debugInfo(std::cout);
-    http::Request request("Head", initial_url, options);
+    http::Request request("HEAD", initial_url, options);
     request.debugInfo(std::cout);
-    std::shared_ptr<transport::Stream> s = std::make_shared<transport::TcpStream>(address_info);
-    http::Write(request, *s);
-    Buffer<std::byte> buffer(4096);
-    while (s->read(buffer) != 0) {
-        for (std::size_t i = 0; i < buffer.valid(); ++i) {
-            std::cout << static_cast<char>(buffer[i]);
+    transport::TcpStream stream(address_info);
+    http::Write(request, stream);
+    http::Response response;
+    http::Read(response, stream);
+    response.debugInfo(std::cout);
+
+    std::ofstream file("temp");
+
+    std::size_t length = 0;
+    if (std::istringstream(response["Content-Length"]) >> length) {
+        transport::TcpStream stream(address_info);
+        request.setMethod("GET");
+        Write(request, stream);
+        Read(response, stream);
+        response.debugInfo(std::cout);
+        SessionBuffer<std::byte> buffer(length);
+        while (stream.read(buffer) != 0) {
+            std::cout << "Download: " << buffer.end() - buffer.begin() << std::endl;
+            for (std::byte b : buffer) {
+                file << static_cast<char>(b);
+            }
         }
     }
+
     std::cout << "[Debug] Finished" << std::endl;
 }
 
-}
+} // namespace cld

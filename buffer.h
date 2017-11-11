@@ -6,56 +6,60 @@
 #include <stdexcept>
 #include <memory>
 #include <algorithm>
+#include <array>
 
-template <typename T, typename Alloc = std::allocator<T>>
-class Buffer {
+namespace cld {
+
+template <typename T, std::size_t S = 4096>
+class Buffer : public std::array<T, S> {
 public:
-    Buffer(std::size_t s, const Alloc &alloc = Alloc()) : allocator(alloc) {
-        if (s < 1) {
-            throw std::logic_error(std::string("Invalid buffer size ") + std::to_string(s));
-        }
-        size_ = s;
-        valid_ = 0;
-        data_ = std::allocator_traits<Alloc>::allocate(allocator, size_);
-    }
-    Buffer(const Buffer &other) = delete;
-    Buffer(Buffer &&other) noexcept {
-        size_ = other.size_;
-        data_ = other.data_;
-        valid_ = other.valid_;
-        other.data_ = nullptr;
-        other.valid_ = 0;
-        other.size_ = 0;
-        std::swap(allocator, other.allocator);
-    }
-    Buffer &operator=(const Buffer &other) = delete;
-    Buffer &operator=(Buffer &&other) noexcept {
-        size_ = other.size_;
-        data_ = other.data_;
-        valid_ = other.valid_;
-        other.data_ = nullptr;
-        other.valid_ = 0;
-        other.size_ = 0;
-        std::swap(allocator, other.allocator);
-        return *this;
-    }
-    ~Buffer() noexcept { std::allocator_traits<Alloc>::deallocate(allocator, data_, size_); }
+    virtual std::size_t maxRead() const { return size(); }
 
-    void setValid(std::size_t valid) { valid_ = valid; }
+    virtual void clear() { valid_ = 0; }
+    virtual void makeValid(std::size_t valid) {
+        if (valid > this->size())
+            throw std::logic_error("Valid data number exceed size");
+        this->valid_ = valid;
+    }
 
-    operator T *() { return data_; }
-    std::size_t size() const { return size_; }
-    std::size_t valid() const { return valid_; }
-    T *data() { return data_; }
-    const T *data() const { return data_; }
-    T &operator[](std::size_t pos) { return data_[pos]; }
+    std::size_t size() const { return data_.size(); }
+    T *data() { return data_.data(); }
+    T *begin() { return data_.begin(); }
+    T *end()   { return data_.begin() + valid_; }
+    const T *begin() const { return data_.begin(); }
+    const T *end()   const { return data_.begin() + valid_; }
+    const T *cbegin() const { return data_.begin(); }
+    const T *cend()  const { return data_.begin() + valid_; }
 
 private:
-    std::size_t valid_;
-    std::size_t size_;
-    T *data_;
-    
-    Alloc allocator;
+    std::size_t valid_ = 0;
+    std::array<T, S> data_;
 };
+
+template <typename T, std::size_t S = 4096>
+class SessionBuffer : public Buffer<T, S> {
+public:
+    SessionBuffer(std::size_t expected) : remain_(expected) {};
+    virtual std::size_t maxRead() const override {
+        if (remain_ < this->size())
+            return remain_;
+        else
+            return this->size();
+    }
+    virtual void makeValid(std::size_t valid) override {
+        if (valid > remain_)
+            throw std::logic_error("New data exceed remain");
+        Buffer<T, S>::makeValid(valid);
+        remain_ -= valid;
+    }
+
+    bool finished() const { return remain_ == 0; }
+    std::size_t remain() { return remain_; }
+
+private:
+    std::size_t remain_;
+};
+
+} // namespace cld
 
 #endif

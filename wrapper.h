@@ -13,9 +13,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-namespace cld {
-
-namespace wrapper {
+namespace cld::wrapper {
 
 /* sys/socket.h */
 extern int Socket(int domain, int type, int protocol);
@@ -47,9 +45,6 @@ extern void InetPton(int af, const char *src, void *dst);
 extern void *GetAddress(const struct sockaddr *sa);
 extern in_port_t GetPort(const struct sockaddr *sa);
 
-} // namespace wrapper
-
-} // namespace cld
-
+} // namespace cld::wrapper
 
 #endif
