@@ -8,12 +8,12 @@ Url::Url(const std::string & url_string)
 {
     std::smatch matches;
     static std::regex normal_url_regex(
-        //      Scheme:         / / host            :port      /path                                  ?query                                    #fragment
-        R"regex((?:([\w+.-]*):)?\/\/([A-Za-z0-9.-]*)(?::(\d+))?(?:\/([a-zA-Z0-9._~!$&'()*+,;=:@%-]*))?(?:\?([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?(?:#([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?)regex"
+        //      Scheme:         / / host            :port      /path                                    ?query                                    #fragment
+        R"regex((?:([\w+.-]*):)?\/\/([A-Za-z0-9.-]*)(?::(\d+))?(?:\/([a-zA-Z0-9._~!$&'()*+,;=:@%\/-]*))?(?:\?([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?(?:#([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?)regex"
     );
     static std::regex ipv6_url_regex(
-        //      Scheme:         / /   ip                :port      /path                                  ?query                                    #fragment
-        R"regex((?:([\w+.-]*):)?\/\/\[([A-Za-z0-9:%]*)\](?::(\d+))?(?:\/([a-zA-Z0-9._~!$&'()*+,;=:@%-]*))?(?:\?([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?(?:#([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?)regex"
+        //      Scheme:         / /   ip                :port      /path                                    ?query                                    #fragment
+        R"regex((?:([\w+.-]*):)?\/\/\[([A-Za-z0-9:%]*)\](?::(\d+))?(?:\/([a-zA-Z0-9._~!$&'()*+,;=:@%\/-]*))?(?:\?([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?(?:#([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?)regex"
     );
 
     if (std::regex_match(url_string, matches, normal_url_regex) ||

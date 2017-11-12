@@ -5,9 +5,10 @@
 #include "address_info.h"
 #include "buffer.h"
 #include "stream.h"
-#include "tcp_stream.h"
 #include "http.h"
 #include "cld.h"
+#include "wrapper.h"
+#include "worker.h"
 
 namespace cld {
 
@@ -28,30 +29,21 @@ void Cld(const Options &options, const Url &initial_url)
     // For test
     AddressInfo address_info(initial_url);
     address_info.debugInfo(std::cout);
-    http::Request request("HEAD", initial_url, options);
+    http::Request request("GET", initial_url, options);
     request.debugInfo(std::cout);
-    transport::TcpStream stream(address_info);
-    http::Write(request, stream);
-    http::Response response;
-    http::Read(response, stream);
-    response.debugInfo(std::cout);
+    int epoll_fd = wrapper::EpollCreate();
 
-    std::ofstream file("temp");
+    int file = wrapper::Open("temp", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    Worker worker(epoll_fd, address_info, initial_url.getScheme(), request, file, 0);
 
-    std::size_t length = 0;
-    if (std::istringstream(response["Content-Length"]) >> length) {
-        transport::TcpStream stream(address_info);
-        request.setMethod("GET");
-        Write(request, stream);
-        Read(response, stream);
-        response.debugInfo(std::cout);
-        SessionBuffer<std::byte> buffer(length);
-        while (stream.read(buffer) != 0) {
-            std::cout << "Download: " << buffer.end() - buffer.begin() << std::endl;
-            for (std::byte b : buffer) {
-                file << static_cast<char>(b);
-            }
+    struct epoll_event events[10];
+    while (true) {
+        int count = wrapper::EpollWait(epoll_fd, events, sizeof events / sizeof events[0], 1000);
+        for (int i = 0; i < count; ++i) {
+            static_cast<Worker *>(events[i].data.ptr)->process(events[i].events);
         }
+        if (worker.getState() == Worker::State::Stopped)
+            break;
     }
 
     std::cout << "[Debug] Finished" << std::endl;

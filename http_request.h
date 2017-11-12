@@ -15,7 +15,7 @@ namespace cld::http {
 
 class Request;
 
-extern void Write(const Request &request, transport::Stream &s);
+extern void WriteRequest(const Request &request, transport::Stream &stream);
 
 class Request {
 public:
@@ -38,7 +38,9 @@ public:
     const std::string &operator[](const std::string &header) const { return headers.at(header); }
     std::byte &operator[](std::size_t pos) { return body[pos]; }
     const std::byte &operator[](std::size_t pos) const { return body[pos]; }
-    
+
+    std::vector<std::byte> request() const;
+
     std::ostream &debugInfo(std::ostream &os) const;
 
 private:

@@ -11,20 +11,18 @@
 
 namespace cld::http {
 
-const std::string Request::kHttpVersion("1.1");
-
-void Write(const Request &request, transport::Stream &s) {
-    s.write(request.getNonBody() + "\r\n");
-    std::cout << "[Debug] Send request:\n";
-    std::cout << request.getNonBody();
-    s.write(request.getBody());
+void WriteRequest(const Request &request, transport::Stream &stream) {
+    auto data = request.request();
+    stream.write(data.data(), data.size());
 }
+
+const std::string Request::kHttpVersion("1.1");
 
 Request::Request(const std::string &method, const Url &url, const Options &options)
     : method(method), resource(url.resource()), body() {
     headers["Host"] = url.getHost();
     headers["User-Agent"] = options.getUserAgent();
-    for (const auto &extra_header : options.getExtraHeaders()) {
+    for (const auto &extra_header : headers) {
         headers[extra_header.first] = extra_header.second;
     }
 }
@@ -48,6 +46,19 @@ std::ostream &Request::debugInfo(std::ostream &os) const {
     }
     os << "\n\tBody size: " << body.size();
     return os << std::endl;
+}
+
+std::vector<std::byte> Request::request() const {
+    std::vector<std::byte> res;
+    for (char c : getNonBody()) {
+        res.push_back(static_cast<std::byte>(c));
+    }
+    res.push_back(static_cast<std::byte>('\r'));
+    res.push_back(static_cast<std::byte>('\n'));
+    for (std::byte b : body) {
+        res.push_back(b);
+    }
+    return res;
 }
 
 } // namespace cld::http

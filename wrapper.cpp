@@ -34,6 +34,26 @@ int Pselect(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds,
     return res;
 }
 
+int EpollCreate() {
+    int res = epoll_create(1024);
+    if (res == -1) { // size are ignored
+        throw std::system_error(errno, std::system_category());
+    }
+    return res;
+}
+
+void EpollControl(int epfd, int op, int fd, struct epoll_event *event) {
+    if (epoll_ctl(epfd, op, fd, event) != 0)
+        throw std::system_error(errno, std::system_category());
+}
+
+int EpollWait(int epfd, struct epoll_event *events, int maxevents, int timeout) {
+    int res = epoll_wait(epfd, events, maxevents, timeout);
+    if (res == -1)
+        throw std::system_error(errno, std::system_category());
+    return res;
+}
+
 std::size_t Read(int fd, std::byte *buf, std::size_t count) {
     ssize_t res = read(fd, buf, count);
     if (res == -1)
@@ -113,6 +133,27 @@ void WriteN(int fd, const std::byte *buf, std::size_t count) {
 void Close(int fd) {
     if (close(fd) == -1)
         throw std::system_error(errno, std::system_category());
+}
+
+off_t LSeek(int fd, off_t offset, int whence) {
+    off_t res = lseek(fd, offset, whence);
+    if (res == -1)
+        throw std::system_error(errno, std::system_category());
+    return res;
+}
+
+int Open(const std::string &path, int oflag) {
+    int res = open(path.c_str(), oflag);
+    if (res == -1)
+        throw std::system_error(errno, std::system_category());
+    return res;
+}
+
+int Open(const std::string &path, int oflag, mode_t mode) {
+    int res = open(path.c_str(), oflag, mode);
+    if (res == -1)
+        throw std::system_error(errno, std::system_category());
+    return res;
 }
 
 void GetAddressInfo(const char *node, const char *service,

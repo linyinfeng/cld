@@ -11,18 +11,20 @@ namespace cld::transport {
 class TcpStream : public Stream {
 public:
     TcpStream() : fd(-1) { }
-    TcpStream(const AddressInfo &address);
-    virtual ~TcpStream();
+    explicit TcpStream(const AddressInfo &address);
+    ~TcpStream() override;
 
-    virtual void connect(const AddressInfo &address) override;
-    virtual void close() override;
+    void connect(const AddressInfo &address) override;
+    void close() override;
+    void shutdown(int how) override;
 
-    virtual bool opened() const override;
-    virtual bool closed() const override;
+    bool opened() const override;
+    bool closed() const override;
 
-protected:
-    virtual std::size_t _read(std::byte *buf, std::size_t size) override;
-    virtual void _write(const std::byte *buf, std::size_t size) override;
+    std::size_t read(std::byte *buf, std::size_t size) override;
+    std::size_t write(const std::byte *buf, std::size_t size) override;
+
+    int getFileDescriptor() override { return fd; }
 
 private:
     int fd;

@@ -12,16 +12,24 @@ namespace cld::http {
 
 class Response;
 
-extern void Read(Response &response, transport::Stream &s);
+extern Response ReadToResponse(transport::Stream &stream);
 
 class Response {
-    friend void Read(Response &response, transport::Stream &s);
 public:
+    Response(std::vector<std::byte> &response);
+
     int getStatus() const { return status; }
     const std::string &getHttpVersion() const { return http_version; }
     const std::string &getStatusText() const { return status_text; }
     const std::map<std::string, std::string> &getHeaders() const { return headers; }
-    const std::string &operator[](const std::string &header) const { return headers.at(header); }
+    std::string operator[](const std::string &header) const {
+        try {
+            return headers.at(header);
+        } catch (std::out_of_range &e) {
+            return std::string();
+        }
+
+    }
 
     bool isOk() const { return status >= 200 && status <= 299; }
     bool isRedirected() const;

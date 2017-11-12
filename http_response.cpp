@@ -10,20 +10,49 @@
 
 namespace cld::http {
 
-void Read(Response &response, transport::Stream &s) {
-    std::string line = s.readLine();
-    static std::regex start_line_regex(R"regex(HTTP\/([\d.]+)\s+([\d]{3})\s+([^\r\n]+)\r\n)regex");
+Response ReadToResponse(transport::Stream &stream) {
+    std::vector<std::byte> response_data;
+    char c, last_char = '\0'; auto p = reinterpret_cast<std::byte *>(&c);
+    while (stream.read(p, 1) == 1) {
+        response_data.push_back(*p);
+        if (last_char == '\n' && c == '\r') {
+            if (stream.read(p, 1) == 1 && c == '\n') {
+                // read \n
+                response_data.push_back(*p);
+                http::Response response(response_data);
+                return response;
+                break;
+            } else {
+                throw std::runtime_error("No \\n follows \\r in stream");
+            }
+        }
+        last_char = c;
+    }
+    throw std::runtime_error("Failed to read to response");
+}
+
+Response::Response(std::vector<std::byte> &response) {
+    response.push_back(static_cast<std::byte>('\0'));
+    std::istringstream ss(reinterpret_cast<const char *>(response.data()));
+
+    std::string line;
+    std::getline(ss, line);
+
+    static std::regex start_line_regex(R"regex(HTTP\/([\d.]+)\s+([\d]{3})\s+([^\r\n]+)\r)regex");
     std::smatch matches;
     if (std::regex_match(line, matches, start_line_regex)) {
-        response.http_version = matches[1];
-        std::istringstream(matches[2]) >> response.status;
-        response.status_text = matches[3];
+        http_version = matches[1];
+        std::istringstream(matches[2]) >> status;
+        status_text = matches[3];
     } else {
         throw std::runtime_error("Invalid response start line");
     }
-    while ( (line = s.readLine()) != "\r\n") {
+    while (true) {
+        std::getline(ss, line);
+        if (line == "\r")
+            break;
         auto header = ParseHeaderString(line);
-        response.headers[header.first] = header.second;
+        headers[header.first] = header.second;
     }
 }
 

@@ -1,6 +1,5 @@
 #include "address_info.h"
 #include "wrapper.h"
-#include <netdb.h>
 
 namespace cld {
 

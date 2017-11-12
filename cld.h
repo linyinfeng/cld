@@ -13,7 +13,7 @@ void PrintHelp();
 void Cld(const Options &options, const Url &initial_url);
 
 void FollowRedirects(); // TODO Follow redirects
-void Download(AddressInfo address_info, http::Request request);        // TODO Download
+//void Download(AddressInfo address_info, http::Request request);        // TODO Download
 
 } // namespace cld
 

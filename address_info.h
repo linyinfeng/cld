@@ -4,7 +4,6 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
-
 #include <netdb.h>
 #include "url.h"
 
@@ -15,12 +14,9 @@ class AddressInfo;
 class AddressInfoIterator {
 public:
     AddressInfoIterator() : ai(nullptr) { }
-    AddressInfoIterator(struct addrinfo *p) : ai(p) { }
-    AddressInfoIterator(const AddressInfoIterator &other) : ai(other.ai) { }
-    AddressInfoIterator &operator= (const AddressInfoIterator &other) {
-        ai = other.ai;
-        return *this;
-    }
+    explicit AddressInfoIterator(struct addrinfo *p) : ai(p) { }
+    AddressInfoIterator(const AddressInfoIterator &other) = default;
+    AddressInfoIterator &operator= (const AddressInfoIterator &other) = default;
 
     struct addrinfo &operator* () { return *ai; }
     struct addrinfo *operator-> () { return ai; }
@@ -37,12 +33,9 @@ private:
 class AddressInfoConstIterator {
 public:
     AddressInfoConstIterator() : ai(nullptr) { }
-    AddressInfoConstIterator(const struct addrinfo *p) : ai(p) { }
-    AddressInfoConstIterator(const AddressInfoConstIterator &other) : ai(other.ai) { }
-    AddressInfoConstIterator &operator= (const AddressInfoConstIterator &other) {
-        ai = other.ai;
-        return *this;
-    }
+    explicit AddressInfoConstIterator(const struct addrinfo *p) : ai(p) { }
+    AddressInfoConstIterator(const AddressInfoConstIterator &other) = default;
+    AddressInfoConstIterator &operator= (const AddressInfoConstIterator &other) = default;
 
     const struct addrinfo &operator* () { return *ai; }
     const struct addrinfo *operator-> () { return ai; }
@@ -59,7 +52,7 @@ private:
 class AddressInfo {
 public:
     AddressInfo() : ai(nullptr) { }
-    AddressInfo(Url url) : AddressInfo(url.node(), url.service()) { }
+    explicit AddressInfo(const Url &url) : AddressInfo(url.node(), url.service()) { }
     AddressInfo(const std::string &node, const std::string &service);
     AddressInfo(const AddressInfo &other) = delete;
     AddressInfo(AddressInfo &&other) noexcept;
@@ -83,4 +76,3 @@ private:
 } // namespace cld
 
 #endif
-
