@@ -11,7 +11,7 @@ namespace cld::transport {
 
 class Stream;
 
-extern std::shared_ptr<Stream> CreateStream(const std::string &scheme, const AddressInfo &addr);
+extern std::shared_ptr<Stream> CreateStream(const std::string &scheme, const AddressInfo &addr, bool blocking);
 
 // A network TcpTcpStream with a seperated buffer
 class Stream {
@@ -22,7 +22,7 @@ public:
     virtual std::size_t write(const std::byte *buf, std::size_t size) = 0;
     virtual std::size_t read(std::byte *buf, std::size_t count) = 0;
 
-    virtual void connect(const AddressInfo &address) = 0;
+    virtual void connect(const AddressInfo &address, bool blocking) = 0;
     virtual void close() = 0;
     virtual void shutdown(int how) = 0;
 

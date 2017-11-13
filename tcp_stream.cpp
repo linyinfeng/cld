@@ -6,9 +6,9 @@
 
 namespace cld::transport {
 
-TcpStream::TcpStream(const AddressInfo &address)
+TcpStream::TcpStream(const AddressInfo &address, bool blocking)
 {
-    connect(address);
+    connect(address, blocking);
 }
 
 TcpStream::~TcpStream()
@@ -16,16 +16,18 @@ TcpStream::~TcpStream()
     close();
 }
 
-void TcpStream::connect(const AddressInfo &address)
+void TcpStream::connect(const AddressInfo &address, bool blocking)
 {
     for (const struct addrinfo &ai : address) {
         try {
             fd = wrapper::Socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol);
-            int flags = fcntl(fd, F_GETFL);
-            if (flags == -1)
-                throw std::system_error(errno, std::system_category());
-            if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-                throw std::system_error(errno, std::system_category());
+            if (!blocking) {
+                int flags = fcntl(fd, F_GETFL);
+                if (flags == -1)
+                    throw std::system_error(errno, std::system_category());
+                if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+                    throw std::system_error(errno, std::system_category());
+            }
             if (::connect(fd, ai.ai_addr, ai.ai_addrlen) != 0 && errno != EINPROGRESS) {
                 throw std::system_error(errno, std::system_category());
             }

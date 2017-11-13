@@ -53,8 +53,6 @@ std::vector<std::byte> Request::request() const {
     for (char c : getNonBody()) {
         res.push_back(static_cast<std::byte>(c));
     }
-    res.push_back(static_cast<std::byte>('\r'));
-    res.push_back(static_cast<std::byte>('\n'));
     for (std::byte b : body) {
         res.push_back(b);
     }

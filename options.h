@@ -2,7 +2,6 @@
 #define CLD_OPTIONS_H_INCLUDED
 
 #include "version.h"
-
 #include <string>
 #include <iostream>
 #include <map>
@@ -19,10 +18,7 @@ private:
     static std::pair<std::string, std::string> parseHeaderString(const std::string &str);
 
 public:
-    Options() {
-        setConnectionsNumber(8);
-        setUserAgent("Cld/" + kCldVersion);
-    }
+    Options() : connections_number(8), user_agent("Cld/" + kCldVersion) { }
 
     int getConnectionsNumber() const { return connections_number; }
     const std::string &getUserAgent() const { return user_agent; }

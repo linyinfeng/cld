@@ -11,10 +11,10 @@ namespace cld::transport {
 class TcpStream : public Stream {
 public:
     TcpStream() : fd(-1) { }
-    explicit TcpStream(const AddressInfo &address);
+    TcpStream(const AddressInfo &address, bool blocking);
     ~TcpStream() override;
 
-    void connect(const AddressInfo &address) override;
+    void connect(const AddressInfo &address, bool blocking) override;
     void close() override;
     void shutdown(int how) override;
 

@@ -189,25 +189,25 @@ void InetPton(int af, const char *src, void *dst) {
         throw std::runtime_error("Invalid IP address");
 }
 
-void *GetAddress(const struct sockaddr *sa)
+void *GetAddress(struct sockaddr *sa)
 {
     if (sa->sa_family == AF_INET) {
-        return static_cast<void *>(&((struct sockaddr_in *)sa)->sin_addr);
+        return reinterpret_cast<void *>(&(reinterpret_cast<struct sockaddr_in *>(sa)->sin_addr));
     }
     else if (sa->sa_family == AF_INET6) {
-        return static_cast<void *>(&((struct sockaddr_in6 *)sa)->sin6_addr);
+        return reinterpret_cast<void *>(&(reinterpret_cast<sockaddr_in6 *>(sa)->sin6_addr));
     }
     else {
         throw std::runtime_error("Unknow address family");
     }
 }
-in_port_t GetPort(const struct sockaddr *sa)
+in_port_t GetPort(struct sockaddr *sa)
 {
     if (sa->sa_family == AF_INET) {
-        return ((struct sockaddr_in *)sa)->sin_port;
+        return (reinterpret_cast<sockaddr_in *>(sa))->sin_port;
     }
     else if (sa->sa_family == AF_INET6) {
-        return ((struct sockaddr_in6 *)sa)->sin6_port;
+        return (reinterpret_cast<sockaddr_in6 *>(sa))->sin6_port;
     }
     else {
         throw std::runtime_error("Unknow address family");

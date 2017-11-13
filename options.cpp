@@ -1,8 +1,8 @@
-#include "options.h"
 #include <string>
 #include <stdexcept>
 #include <map>
 #include <regex>
+#include "options.h"
 
 namespace cld {
 

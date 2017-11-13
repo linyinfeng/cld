@@ -54,8 +54,8 @@ extern std::string InetNtop(int af, const void *src);
 extern void InetPton(int af, const char *src, void *dst);
 
 /* Other */
-extern void *GetAddress(const struct sockaddr *sa);
-extern in_port_t GetPort(const struct sockaddr *sa);
+extern void *GetAddress(struct sockaddr *sa);
+extern in_port_t GetPort(struct sockaddr *sa);
 
 } // namespace cld::wrapper
 

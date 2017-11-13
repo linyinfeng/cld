@@ -10,17 +10,20 @@ namespace cld {
 
 class Worker {
 public:
-    Worker(int epoll_fd, const AddressInfo &address, const std::string scheme,
+    Worker(int epoll_fd, const AddressInfo &address, const std::string &scheme,
            const http::Request &request, int file, off_t file_offset);
 
     int getFileDescriptor() { return stream->getFileDescriptor(); }
+    off_t getOffset() const { return file_offset; }
 
+    /* Worker in state Receiving never enter read data in ReceivingBody state */
     enum class State {
         Connecting, Sending, Receiving, ReceivingBody, Stopped
     };
-    State getState() { return state; }
+    State getState() const { return state; }
 
     void process(uint32_t events);
+    void forceStop();
 
 private:
     State state;
