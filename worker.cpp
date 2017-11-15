@@ -18,7 +18,9 @@ Worker::Worker(int epoll_fd, const AddressInfo &address, const std::string &sche
     wrapper::EpollControl(epoll_fd, EPOLL_CTL_ADD, stream->getFileDescriptor(), &event);
 }
 
-void Worker::process(uint32_t event) {
+std::size_t Worker::process(uint32_t event) {
+    std::size_t file_read_count = 0;
+
     if (state == State::Connecting) {
         if (event & EPOLLOUT) {
             if (stream->opened()) {
@@ -35,7 +37,8 @@ void Worker::process(uint32_t event) {
             request_data_sent += res;
             if (request_data_sent == request_data.size()) {
                 // finish sending
-                stream->shutdown(SHUT_WR);
+                // Some server shutdown unexpectedly when the client shutdown wirting
+                // stream->shutdown(SHUT_WR);
 
                 struct epoll_event new_event{};
                 new_event.events = EPOLLIN | EPOLLERR;
@@ -73,21 +76,26 @@ void Worker::process(uint32_t event) {
     }
     if (state == State::ReceivingBody && !recieved_once) {
         if (event & EPOLLIN) {
-            if (buffer->read(*stream)) {
-                wrapper::LSeek(file, file_offset, SEEK_SET);
-                file_offset += wrapper::Write(file, buffer->data().data(), buffer->validCount());
-            } else {
-                stream->shutdown(SHUT_RD);
+            bool hava_remain = buffer->read(*stream);
+            wrapper::LSeek(file, file_offset, SEEK_SET);
+            std::size_t written_to_file = wrapper::Write(file, buffer->data().data(), buffer->validCount());
+            file_offset += written_to_file;
+            file_read_count += written_to_file;
+            if (!hava_remain) {
+                //stream->shutdown(SHUT_RD);
                 state = State::Stopped;
             }
         }
     }
     if (state == State::Stopped) {
         wrapper::EpollControl(epoll_fd, EPOLL_CTL_DEL, stream->getFileDescriptor(), nullptr);
+        stream->shutdown(SHUT_RDWR);
         stream->close();
         buffer.reset();
         stream.reset();
     }
+
+    return file_read_count;
 }
 
 void Worker::forceStop() {

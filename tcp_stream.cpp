@@ -21,15 +21,15 @@ void TcpStream::connect(const AddressInfo &address, bool blocking)
     for (const struct addrinfo &ai : address) {
         try {
             fd = wrapper::Socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol);
+            if (::connect(fd, ai.ai_addr, ai.ai_addrlen) != 0 && errno != EINPROGRESS) {
+                throw std::system_error(errno, std::system_category());
+            }
             if (!blocking) {
                 int flags = fcntl(fd, F_GETFL);
                 if (flags == -1)
                     throw std::system_error(errno, std::system_category());
                 if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
                     throw std::system_error(errno, std::system_category());
-            }
-            if (::connect(fd, ai.ai_addr, ai.ai_addrlen) != 0 && errno != EINPROGRESS) {
-                throw std::system_error(errno, std::system_category());
             }
             break;
         }
@@ -60,15 +60,12 @@ bool TcpStream::opened() const
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0) {
         return false;
     }
-    if (result != 0) {
-        return false;
-    }
-    return true;
+    return result == 0;
 }
 
 bool TcpStream::closed() const
 {
-    return fd == -1;
+    return !opened();
 }
 
 std::size_t TcpStream::read(std::byte *buf, std::size_t size) {
@@ -76,7 +73,7 @@ std::size_t TcpStream::read(std::byte *buf, std::size_t size) {
     std::size_t left = size;
     while (left > 0) {
         ssize_t read_count;
-        if ((read_count = ::read(fd, buf, left)) < 0) {
+        if ((read_count = ::read(fd, buf, left)) <= 0) {
             if (errno == EINTR) {
                 continue;
             } else if (errno == EAGAIN || errno == EWOULDBLOCK) {

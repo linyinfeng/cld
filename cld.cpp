@@ -4,8 +4,9 @@
 #include <regex>
 #include <fstream>
 #include <list>
-#include <tuple>
-#include <map>
+#include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include "address_info.h"
 #include "buffer.h"
 #include "stream.h"
@@ -18,6 +19,119 @@
 
 namespace cld {
 
+static void SingleConnectionDownload(const AddressInfo &address, const std::string &scheme,
+                                     const http::Request &request, int file);
+static void MultiConnectionDownload(const AddressInfo &address, const std::string &scheme,
+                                    const http::Request &request, int file, std::size_t size, int connection_number);
+static std::string BytesCountToHumanReadable(std::size_t bytes, bool standard = false);
+
+void Cld(Options &options, Url &url) {
+    bool find = false;
+    AddressInfo address_info;
+    http::Request request;
+    http::Response response;
+
+    /* Follow redirects */
+    do {
+        /* Get response */
+        address_info = AddressInfo(url);
+        address_info.debugInfo(std::cout);
+        request = http::Request("HEAD", url, options);
+        request.debugInfo(std::cout);
+        auto stream = transport::CreateStream(url.getScheme(), address_info, true);
+        if (!stream->opened()) {
+            throw std::runtime_error("Connect failed");
+        }
+        http::WriteRequest(request, *stream);
+        stream->shutdown(SHUT_WR);
+        response = http::ReadToResponse(*stream);
+        response.debugInfo(std::cout);
+        stream->shutdown(SHUT_RD);
+        stream->close();
+
+        /* Analysis response */
+        switch (response.getStatus()) {
+            case 300: case 301: case 302: case 307:
+            {
+                std::string location = response["Location"];
+                if (location.empty())
+                    throw std::runtime_error("No Location given in redirects");
+                try {
+                    // Absolute
+                    url = Url(location);
+                } catch (std::exception) {
+                    // Reletive
+                    //                 /path                               ?query                                    #fragment
+                    std::regex regex(R"regex(\/([a-zA-Z0-9._~!$&'()*+,;=:@%\/-]*)(?:\?([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?(?:#([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?)regex");
+                    std::smatch matches;
+                    if (std::regex_match(location, matches, regex)) {
+                        url.setPath(matches[1]);
+                        url.setQuery(matches[2]);    // Usually empty
+                        url.setFragment(matches[3]); // Usually empty
+                    } else {
+                        throw std::runtime_error("Invalid Location in redirects: " + location);
+                    }
+                }
+            }
+                break;
+            case 303: case 304: case 305:
+                throw std::runtime_error("Unsupported redirect");
+                break;
+            default:
+                if (response.isOk()) {
+                    find = true;
+                } else {
+                    throw std::runtime_error("Failed to get resource: " +
+                                             std::to_string(response.getStatus()) + " - " + response.getStatusText());
+                }
+        }
+
+        /* set cookie */
+        if (!response["Set-Cookie"].empty()) {
+            options.addExtraHeader("Cookie", response["Set-Cookie"]);
+        }
+
+        std::string path = url.getPath();
+        static std::regex get_filename_from_path(R"regex(.*\/(.*)$)regex");
+        std::smatch matches;
+        if (std::regex_match(path, matches, get_filename_from_path)) {
+            options.setOutputPath(matches[1]);
+        }
+    } while (!find);
+
+    int file;
+    if (options.getOutputPath().empty()) {
+        char filename[] = "cld_XXXXXX";
+        file = mkstemp(filename);
+    } else {
+        file = wrapper::Open(options.getOutputPath(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    }
+    
+    request.setMethod("GET");
+
+    // Select download method
+    if (response["Content-Length"].empty() ||
+        response["Accept-Ranges"].empty() ||
+        response["Accept-Ranges"] == "none") {
+//    if (response["Content-Length"].empty()) {
+        std::cout << "[Debug] Server report range download unsupported" << std::endl;
+        SingleConnectionDownload(address_info, url.getScheme(), request, file);
+    } else {
+        std::size_t file_size;
+        if (std::istringstream(response["Content-Length"]) >> file_size) {
+            MultiConnectionDownload(address_info, url.getScheme(),
+                                    request, file, file_size, options.getConnectionsNumber());
+        } else {
+            std::cout << "[Debug] Server report range download unsupported" << std::endl;
+//            MultiConnectionDownload(address_info, url.getScheme(), request, file, file_size, 1);
+            SingleConnectionDownload(address_info, url.getScheme(), request, file);
+        }
+    }
+
+    std::cout << "[Info] Finished" << std::endl;
+    std::cout << "[Info] File saved to " + options.getOutputPath() << std::endl;
+}
+
 void PrintHelp() {
     std::cout <<
               "Usage: cld [options] url\n"
@@ -29,72 +143,62 @@ void PrintHelp() {
               << std::endl;
 }
 
-void Cld(const Options &options, const Url &initial_url) {
-    // For test
-    AddressInfo address_info(initial_url);
-    address_info.debugInfo(std::cout);
-    http::Request request("GET", initial_url, options);
-    request.debugInfo(std::cout);
-    transport::TcpStream stream(address_info, true);
-    http::WriteRequest(request, stream);
-    stream.shutdown(SHUT_WR);
-    auto response = http::ReadToResponse(stream);
-    response.debugInfo(std::cout);
-    stream.shutdown(SHUT_RD);
-    stream.close();
-
-    int file = wrapper::Open("temp", O_WRONLY | O_CREAT | O_TRUNC, 0666);
-
-    if (response["Content-Length"].empty() ||
-        response["Accept-Ranges"].empty() ||
-        response["Accept-Ranges"] == "none") {
-        std::cout << "[Debug] Server report range download unsupported" << std::endl;
-        SingleConnectionDownload(address_info, initial_url.getScheme(), request, file);
-    } else {
-        std::size_t file_size;
-        if (std::istringstream(response["Content-Length"]) >> file_size) {
-            MultiConnectionDownload(address_info, initial_url.getScheme(),
-                                    request, file, file_size, options.getConnectionsNumber());
-        } else {
-            SingleConnectionDownload(address_info, initial_url.getScheme(), request, file);
-        }
-    }
-    std::cout << "[Debug] Finished" << std::endl;
-}
-
-void SingleConnectionDownload(const AddressInfo &address, const std::string &scheme,
+static void SingleConnectionDownload(const AddressInfo &address, const std::string &scheme,
                               const http::Request &request, int file) {
+    auto last_time = std::chrono::system_clock::now();
+    std::size_t last_downloaded = 0;
+
     int epoll_fd = wrapper::EpollCreate();
     Worker worker(epoll_fd, address, scheme, request, file, 0);
-    auto events = new struct epoll_event[1];
+    struct epoll_event events[10];
     while (true) {
-        int count = wrapper::EpollWait(epoll_fd, events, 1, 1000);
+        int count = wrapper::EpollWait(epoll_fd, events, sizeof events / sizeof *events, 1000);
         for (int i = 0; i < count; ++i) {
-            static_cast<Worker *>(events[i].data.ptr)->process(events[i].events);
+            last_downloaded += static_cast<Worker *>(events[i].data.ptr)->process(events[i].events);
         }
+
         if (worker.getState() == Worker::State::Stopped) {
             break;
         }
+
+        auto time = std::chrono::system_clock::now();
+        if ( (time - last_time) >= std::chrono::milliseconds(250)) {
+            std::cout << "\033[1m"
+                      << "[Info] "
+                      << "Download with single connection"
+                      << " Speed: "
+                      << BytesCountToHumanReadable(
+                              static_cast<std::size_t>(
+                                      1000 * last_downloaded / std::chrono::duration_cast<std::chrono::milliseconds>(time - last_time).count()
+                              )
+                      )
+                      << "/s"
+                      << "\033[0m"
+                      << std::endl;
+            last_time = time;
+            last_downloaded = 0;
+        }
     }
 }
 
-void MultiConnectionDownload(const AddressInfo &address, const std::string &scheme,
+static void MultiConnectionDownload(const AddressInfo &address, const std::string &scheme,
                              const http::Request &request, int file, std::size_t size, int connection_number) {
+    auto last_time = std::chrono::system_clock::now();
+    off_t last_remain = size;
+
     int epoll_fd = wrapper::EpollCreate();
     http::Request req = request;
-    std::vector<std::shared_ptr<Worker>> workers(connection_number, nullptr);
-
-    LengthController controller(size, 4096);
-
-    auto events = new struct epoll_event[1];
+    std::vector<std::shared_ptr<Worker>> workers(static_cast<size_t>(connection_number));
+    LengthController controller(size, 128 * 1024); // Minimal size 128 kiB
+    auto events = new struct epoll_event[connection_number];
     do {
         for (std::shared_ptr<Worker> &worker : workers) {
-            if (worker.get() != nullptr && worker->getState() == Worker::State::Stopped) {
+            if (worker != nullptr && worker->getState() == Worker::State::Stopped) {
                 // clean
                 controller.workerStopped(worker.get());
                 worker.reset();
             }
-            if (worker.get() == nullptr) {
+            if (worker == nullptr) {
                 off_t begin, end;
                 std::tie(begin, end) = controller.next();
                 if (end - begin != 0) {
@@ -103,16 +207,17 @@ void MultiConnectionDownload(const AddressInfo &address, const std::string &sche
                               << "\"Range\" " << ": \"" + req["Range"] << "\"" << std::endl;
                     worker = std::make_shared<Worker>(epoll_fd, address, scheme, req, file, begin);
                     controller.add(worker.get());
-                    controller.debugInfo(std::cout);
+                    std::cout << "\033[1m[Info] New worker created\033[0m" << std::endl;
+                    //controller.debugInfo(std::cout);
                 }
             }
         }
-        int count = wrapper::EpollWait(epoll_fd, events, 1, 1000);
+        int count = wrapper::EpollWait(epoll_fd, events, connection_number, 1000); // 1 second timeout
         for (int i = 0; i < count; ++i) {
             auto worker = static_cast<Worker *>(events[i].data.ptr);
-            bool update_controller = false;
+            bool is_receiving_body = false;
             if (worker->getState() == Worker::State::ReceivingBody)
-                update_controller = true;
+                is_receiving_body = true;
             try {
                 worker->process(events[i].events);
             } catch (std::exception &e) {
@@ -120,7 +225,7 @@ void MultiConnectionDownload(const AddressInfo &address, const std::string &sche
                 controller.workerStopped(worker);
                 std::cout << "[Debug] Worker " << worker << " force stopped because \"" << e.what() << "\"" << std::endl;
             }
-            if (update_controller) {
+            if (is_receiving_body) {
                 // if should stop, afterRead return false
                 if (!controller.afterRead(worker)) {
                     if (worker->getState() != Worker::State::Stopped) {
@@ -133,12 +238,45 @@ void MultiConnectionDownload(const AddressInfo &address, const std::string &sche
                 }
             }
         }
+
+        auto time = std::chrono::system_clock::now();
+        if ( (time - last_time) >= std::chrono::milliseconds(250)) {
+            off_t remain = controller.remain();
+            std::cout << "\033[1m"
+                      << "[Info] "
+                      << "Connections: " << controller.workerNumber()
+                      << " Remain: " << BytesCountToHumanReadable(static_cast<std::size_t>(remain))
+                      << " Speed: "
+                      << BytesCountToHumanReadable(
+                              static_cast<std::size_t>(
+                                      1000 * (last_remain - remain) / std::chrono::duration_cast<std::chrono::milliseconds>(time - last_time).count()
+                              )
+                      )
+                      << "/s"
+                      << "\033[0m"
+                      << std::endl;
+            last_time = time;
+            last_remain = remain;
+        }
         if (controller.finished()) {
             break;
         }
     } while (true);
 
+    delete[] events;
     wrapper::Close(epoll_fd);
+}
+
+static std::string BytesCountToHumanReadable(std::size_t bytes, bool standard) {
+    std::size_t unit = standard ? 1000 : 1024;
+    if (bytes < unit) return std::to_string(bytes) + " B";
+    auto exp = static_cast<std::size_t>(std::log(bytes) / std::log(unit));
+    if (exp > 7) exp = 6;
+    std::string unit_string(standard ? "kMGTPE" : "KMGTPE");
+    std::ostringstream ss;
+    ss << std::setiosflags(std::ios::fixed) << std::setprecision(2) << (bytes / std::pow(unit, exp))
+       << " " << unit_string[exp - 1] << (standard ? "" : "i") << "B";
+    return ss.str();
 }
 
 } // namespace cld

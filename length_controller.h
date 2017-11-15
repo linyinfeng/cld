@@ -24,6 +24,8 @@ public:
     off_t checkEnd(const Worker *worker);
     bool finished();
 
+    std::size_t workerNumber();
+    off_t remain();
     void debugInfo(std::ostream &os);
 
 private:

@@ -41,7 +41,7 @@ bool LengthController::afterRead(const Worker *worker) {
     Fragment *f = node_finder.at(worker);
     f->begin = worker->getOffset();
     if (f->end <= f->begin) {
-        std::cout << "[Debug] Worker " << worker << "finished" << std::endl;
+        std::cout << "[Debug] Controller report worker " << worker << " finished" << std::endl;
         length_monitor.remove(*f); // finish worker's fragment
         node_finder.erase(worker);
         length_monitor.sort();
@@ -64,7 +64,7 @@ void LengthController::workerStopped(const Worker *worker) {
         node_finder.erase(worker);
         length_monitor.sort();
     } catch (std::out_of_range &e) {
-        std::cout << "[Debug] Stopping of worker " << worker << " has been handled" << std::endl;
+        std::cout << "[Debug] Stopping of worker " << worker << " confirmed" << std::endl;
     }
 }
 
@@ -96,7 +96,19 @@ void LengthController::debugInfo(std::ostream &os) {
             << std::setw(20) << t.second->end << " "
             << t.second->worker;
     }
-    os << std::endl;   
+    os << std::endl;
+}
+
+std::size_t LengthController::workerNumber() {
+    return node_finder.size();
+}
+
+off_t LengthController::remain() {
+    off_t res = 0;
+    for (const auto &f : length_monitor) {
+        res += f.end - f.begin;
+    }
+    return res;
 }
 
 bool LengthController::Fragment::operator<(const LengthController::Fragment &other) {

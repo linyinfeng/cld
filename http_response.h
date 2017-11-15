@@ -16,6 +16,7 @@ extern Response ReadToResponse(transport::Stream &stream);
 
 class Response {
 public:
+    Response() {}
     Response(std::vector<std::byte> &response);
 
     int getStatus() const { return status; }
@@ -28,7 +29,6 @@ public:
         } catch (std::out_of_range &e) {
             return std::string();
         }
-
     }
 
     bool isOk() const { return status >= 200 && status <= 299; }

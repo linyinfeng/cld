@@ -22,7 +22,7 @@ Request::Request(const std::string &method, const Url &url, const Options &optio
     : method(method), resource(url.resource()), body() {
     headers["Host"] = url.getHost();
     headers["User-Agent"] = options.getUserAgent();
-    for (const auto &extra_header : headers) {
+    for (const auto &extra_header : options.getExtraHeaders()) {
         headers[extra_header.first] = extra_header.second;
     }
 }

@@ -5,19 +5,15 @@
 #include "url.h"
 #include "address_info.h"
 #include "http.h"
+#include <string>
 
 namespace cld {
 
 void PrintHelp();
 
-void Cld(const Options &options, const Url &initial_url);
+void Cld(Options &options, Url &url);
 
-void FollowRedirects(); // TODO Follow redirect
-void SingleConnectionDownload(const AddressInfo &address, const std::string &scheme,
-                             const http::Request &request, int file);
-void MultiConnectionDownload(const AddressInfo &address, const std::string &scheme,
-                             const http::Request &request, int file, std::size_t size, int connection_number);
-//void Download(AddressInfo address_info, http::Request request);        // TODO Download
+
 
 } // namespace cld
 

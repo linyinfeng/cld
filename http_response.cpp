@@ -49,10 +49,19 @@ Response::Response(std::vector<std::byte> &response) {
     }
     while (true) {
         std::getline(ss, line);
-        if (line == "\r")
+        if (line[0] == '\r')
             break;
         auto header = ParseHeaderString(line);
-        headers[header.first] = header.second;
+
+        if (header.first == "Set-Cookie") {
+            std::string old = headers[header.first];
+            static std::regex regex(R"regex(.*;\s*$)regex");
+            if (!old.empty() && !std::regex_match(old, regex))
+                headers[header.first] += "; ";
+            headers[header.first] += header.second;
+        } else {
+            headers[header.first] = header.second;
+        }
     }
 }
 

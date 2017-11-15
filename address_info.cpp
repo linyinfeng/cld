@@ -25,17 +25,23 @@ AddressInfo::~AddressInfo()
         freeaddrinfo(ai);
 }
 
-std::ostream &AddressInfo::debugInfo(std::ostream & os)
+void AddressInfo::debugInfo(std::ostream & os)
 {
     os << "[Debug] Address info:";
     for (const struct addrinfo &ai : *this) {
         os << "\n\tAddress: "
             << wrapper::InetNtop(ai.ai_family, wrapper::GetAddress(ai.ai_addr));
     }
-    return os << std::endl;
+    os << std::endl;
 }
 
-AddressInfoConstIterator & AddressInfoConstIterator::operator++()
+AddressInfo &AddressInfo::operator=(AddressInfo &&other) {
+    ai = other.ai;
+    other.ai = nullptr;
+    return *this;
+}
+
+    AddressInfoConstIterator & AddressInfoConstIterator::operator++()
 {
     if (ai != nullptr)
         ai = ai->ai_next;

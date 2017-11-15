@@ -1,5 +1,6 @@
 #include "stream.h"
 #include "tcp_stream.h"
+#include "ssl_stream.h"
 #include <memory>
 #include <stdexcept>
 
@@ -9,7 +10,7 @@ std::shared_ptr<Stream> CreateStream(const std::string &scheme, const AddressInf
     if (scheme == "http") {
         return std::make_shared<TcpStream>(addr, blocking);
     } else if (scheme == "https") {
-        throw std::logic_error("Unsupported scheme");
+        return std::make_shared<SslStream>(addr,blocking);
     } else {
         throw std::logic_error("Unsupported scheme");
     }

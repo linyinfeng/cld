@@ -19,6 +19,7 @@ extern void WriteRequest(const Request &request, transport::Stream &stream);
 
 class Request {
 public:
+    Request() { }
     Request(const std::string &method, const Url &url, const Options &options);
     Request(const std::string &method, const std::string &resource, const std::map<std::string, std::string> headers,
             const std::vector<std::byte> &body = std::vector<std::byte>())

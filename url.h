@@ -28,6 +28,13 @@ public:
     const std::string &getQuery() const { return query; }
     const std::string &getFragment() const { return fragment; }
 
+    void setScheme(const std::string &scheme) { this->scheme = scheme; }
+    void setHost(const std::string &host) { this->host = host; }
+    void setPort(const std::string &port) { this->port = port; }
+    void setPath(const std::string &path) { this->path = path; }
+    void setQuery(const std::string &query) { this->query = query; }
+    void setFragment(const std::string &fragment) { this->fragment = fragment; }
+
     std::ostream & debugInfo(std::ostream &os);
 
 private:

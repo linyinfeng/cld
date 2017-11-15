@@ -53,12 +53,11 @@ class FixLengthBuffer : public Buffer<S> {
 public:
     explicit FixLengthBuffer(std::size_t size) : remain_(size) {}
     bool read(transport::Stream &stream) override {
-        if (remain_ == 0) // finished
-            return false;
-        std::size_t read_count = stream.read(this->data_.data(), std::min(remain_, this->data_.size()));
+        std::size_t read_count = stream.read(this->data_.data(),
+            std::min(remain_, this->data_.size()));
         this->end_ = this->data_.data() + read_count;
         remain_ -= read_count;
-        return true;
+        return remain_ != 0;
     }
 private:
     std::size_t remain_;
@@ -107,12 +106,14 @@ public:
         }
 
         if (chunk_remain_ == 0) {
+            this->end_ = this->data_.data();
             return false;
         }
 
-        // if don't finish chunk header
-        this->end_ = this->data_.data(); // no data
-        return true;
+        throw std::runtime_error("Unreachable code in chunked buffer");
+//        // if don't finish chunk header
+//        this->end_ = this->data_.data(); // no data
+//        return true;
     }
 
 private:

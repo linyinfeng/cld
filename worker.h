@@ -22,7 +22,8 @@ public:
     };
     State getState() const { return state; }
 
-    void process(uint32_t events);
+    std::size_t process(uint32_t events);
+
     void forceStop();
 
 private:

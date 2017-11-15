@@ -56,6 +56,7 @@ public:
     AddressInfo(const std::string &node, const std::string &service);
     AddressInfo(const AddressInfo &other) = delete;
     AddressInfo(AddressInfo &&other) noexcept;
+    AddressInfo &operator= (AddressInfo &&other);
     ~AddressInfo();
 
     const struct addrinfo *getAddressInfo() const { return ai; }
@@ -67,7 +68,7 @@ public:
     AddressInfoConstIterator cbegin() const { return AddressInfoConstIterator(ai); }
     AddressInfoConstIterator cend() const { return AddressInfoConstIterator(); }
 
-    std::ostream &debugInfo(std::ostream &os);
+    void debugInfo(std::ostream &os);
 
 private:
     struct addrinfo *ai;
