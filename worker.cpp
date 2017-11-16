@@ -1,6 +1,7 @@
 #include "worker.h"
 #include <sys/epoll.h>
 #include "wrapper.h"
+#include "stream.h"
 
 namespace cld {
 
@@ -32,8 +33,17 @@ std::size_t Worker::process(uint32_t event) {
     }
     if (state == State::Sending) {
         if (event & EPOLLOUT) {
-            std::size_t res = stream->write(request_data.data() + request_data_sent,
-                                           request_data.size() - request_data_sent);
+            std::size_t res = 0;
+
+            try {
+                res = stream->write(request_data.data() + request_data_sent,
+                                                request_data.size() - request_data_sent);
+            } catch (transport::StreamException &e) {
+                if (e.exception == transport::StreamException::Exception::kAgain) {
+                    return 0;
+                }
+            }
+
             request_data_sent += res;
             if (request_data_sent == request_data.size()) {
                 // finish sending
@@ -51,40 +61,56 @@ std::size_t Worker::process(uint32_t event) {
     bool recieved_once = false;
     if (state == State::Receiving) {
         if (event & EPOLLIN) {
-            char c; auto p = reinterpret_cast<std::byte *>(&c);
-            while (stream->read(p, 1) == 1) {
-                response_data.push_back(*p);
-                if (last_char == '\n' && c == '\r') {
-                    if (stream->read(p, 1) == 1 && c == '\n') {
-                        // read \n
-                        response_data.push_back(*p);
-                        http::Response response(response_data);
-                        std::cout << "[Debug] Worker get response" << std::endl;
-                        response.debugInfo(std::cout);
-                        std::cout << "[Debug] Worker file offset: " << file_offset << std::endl;
-                        buffer = http::CreateBuffer<>(response);
-                        state = State::ReceivingBody;
-                        recieved_once = true;
-                        break;
-                    } else {
-                        throw std::runtime_error("No \\n follows \\r in stream");
+            try {
+                char c;
+                auto p = reinterpret_cast<std::byte *>(&c);
+                while (stream->read(p, 1) == 1) {
+                    response_data.push_back(*p);
+                    if (last_char == '\n' && c == '\r') {
+                        if (stream->read(p, 1) == 1 && c == '\n') {
+                            // read \n
+                            response_data.push_back(*p);
+                            http::Response response(response_data);
+                            std::cout << "[Debug] Worker get response" << std::endl;
+                            response.debugInfo(std::cout);
+                            std::cout << "[Debug] Worker file offset: " << file_offset << std::endl;
+                            buffer = http::CreateBuffer<kBufferSize>(response);
+                            state = State::ReceivingBody;
+                            recieved_once = true;
+                            break;
+                        } else {
+                            throw std::runtime_error("No \\n follows \\r in stream");
+                        }
                     }
+                    last_char = c;
                 }
-                last_char = c;
+            } catch (transport::StreamException &e) {
+                if (e.exception == transport::StreamException::Exception::kAgain) {
+                    return 0;
+                }
             }
         }
     }
     if (state == State::ReceivingBody && !recieved_once) {
         if (event & EPOLLIN) {
-            bool hava_remain = buffer->read(*stream);
-            wrapper::LSeek(file, file_offset, SEEK_SET);
-            std::size_t written_to_file = wrapper::Write(file, buffer->data().data(), buffer->validCount());
-            file_offset += written_to_file;
-            file_read_count += written_to_file;
-            if (!hava_remain) {
-                //stream->shutdown(SHUT_RD);
-                state = State::Stopped;
-            }
+            std::size_t written_to_file = 0;
+            do {
+                try {
+                    buffer->read(*stream);
+                } catch (transport::StreamException &e) {
+                    if (e.exception == transport::StreamException::Exception::kAgain) {
+                        return file_read_count;
+                    }
+                }
+                wrapper::LSeek(file, file_offset, SEEK_SET);
+                written_to_file = wrapper::Write(file, buffer->data().data(), buffer->validCount());
+                file_offset += written_to_file;
+                file_read_count += written_to_file;
+                if (buffer->finished()) {
+                    state = State::Stopped;
+                    break;
+                }
+            } while (written_to_file != 0);
         }
     }
     if (state == State::Stopped) {

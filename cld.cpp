@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <algorithm>
 #include "address_info.h"
 #include "buffer.h"
 #include "stream.h"
@@ -18,6 +19,9 @@
 #include "length_controller.h"
 
 namespace cld {
+
+static const std::string kInfoStyle("\033[1m");
+static const std::string kCleanStyle("\033[0m");
 
 static void SingleConnectionDownload(const AddressInfo &address, const std::string &scheme,
                                      const http::Request &request, int file);
@@ -33,6 +37,22 @@ void Cld(Options &options, Url &url) {
 
     /* Follow redirects */
     do {
+        // if no path have been set
+        if (options.getOutputPath().empty()) {
+            const std::string &path = url.getPath();
+            std::string::size_type pos = path.find_last_of('/');
+            std::string new_path;
+            if (pos == std::string::npos) {
+                new_path = path;
+            } else {
+                new_path = path.substr(pos + 1, std::string::npos);
+            }
+            if (!new_path.empty()) {
+                options.setOutputPath(new_path);
+                std::cout << kInfoStyle << "[Info] Set path to " << options.getOutputPath() << kCleanStyle << std::endl;
+            }
+        }
+
         /* Get response */
         address_info = AddressInfo(url);
         address_info.debugInfo(std::cout);
@@ -59,8 +79,8 @@ void Cld(Options &options, Url &url) {
                 try {
                     // Absolute
                     url = Url(location);
-                } catch (std::exception) {
-                    // Reletive
+                } catch (std::exception &e) {
+                    // Relative
                     //                 /path                               ?query                                    #fragment
                     std::regex regex(R"regex(\/([a-zA-Z0-9._~!$&'()*+,;=:@%\/-]*)(?:\?([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?(?:#([a-zA-Z0-9._~!$&'()*+,;=:@\/?%-]*))?)regex");
                     std::smatch matches;
@@ -76,7 +96,6 @@ void Cld(Options &options, Url &url) {
                 break;
             case 303: case 304: case 305:
                 throw std::runtime_error("Unsupported redirect");
-                break;
             default:
                 if (response.isOk()) {
                     find = true;
@@ -90,46 +109,47 @@ void Cld(Options &options, Url &url) {
         if (!response["Set-Cookie"].empty()) {
             options.addExtraHeader("Cookie", response["Set-Cookie"]);
         }
-
-        std::string path = url.getPath();
-        static std::regex get_filename_from_path(R"regex(.*\/(.*)$)regex");
-        std::smatch matches;
-        if (std::regex_match(path, matches, get_filename_from_path)) {
-            options.setOutputPath(matches[1]);
-        }
     } while (!find);
 
     int file;
     if (options.getOutputPath().empty()) {
         char filename[] = "cld_XXXXXX";
         file = mkstemp(filename);
+        options.setOutputPath(filename);
     } else {
         file = wrapper::Open(options.getOutputPath(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
     }
-    
+
     request.setMethod("GET");
 
     // Select download method
-    if (response["Content-Length"].empty() ||
-        response["Accept-Ranges"].empty() ||
+    if (
+        //response["Accept-Ranges"].empty() ||
         response["Accept-Ranges"] == "none") {
-//    if (response["Content-Length"].empty()) {
-        std::cout << "[Debug] Server report range download unsupported" << std::endl;
-        SingleConnectionDownload(address_info, url.getScheme(), request, file);
+        std::size_t file_size;
+        if (std::istringstream(response["Content-Length"]) >> file_size) {
+            std::cout << "[Debug] Server report range download unsupported" << std::endl;
+            std::cout << kInfoStyle << "[Info] File size set to " << file_size << kCleanStyle << std::endl;
+            MultiConnectionDownload(address_info, url.getScheme(),
+                                    request, file, file_size, 1);
+        } else {
+            std::cout << "[Debug] Server report range download unsupported" << std::endl;
+            SingleConnectionDownload(address_info, url.getScheme(), request, file);
+        }
     } else {
         std::size_t file_size;
         if (std::istringstream(response["Content-Length"]) >> file_size) {
+            std::cout << kInfoStyle << "[Info] File size set to " << file_size << kCleanStyle << std::endl;
             MultiConnectionDownload(address_info, url.getScheme(),
                                     request, file, file_size, options.getConnectionsNumber());
         } else {
             std::cout << "[Debug] Server report range download unsupported" << std::endl;
-//            MultiConnectionDownload(address_info, url.getScheme(), request, file, file_size, 1);
             SingleConnectionDownload(address_info, url.getScheme(), request, file);
         }
     }
 
-    std::cout << "[Info] Finished" << std::endl;
-    std::cout << "[Info] File saved to " + options.getOutputPath() << std::endl;
+    std::cout << kInfoStyle << "[Info] Finished" << kCleanStyle << std::endl;
+    std::cout << kInfoStyle << "[Info] File saved to " + options.getOutputPath() << kCleanStyle << std::endl;
 }
 
 void PrintHelp() {
@@ -163,7 +183,7 @@ static void SingleConnectionDownload(const AddressInfo &address, const std::stri
 
         auto time = std::chrono::system_clock::now();
         if ( (time - last_time) >= std::chrono::milliseconds(250)) {
-            std::cout << "\033[1m"
+            std::cout << kInfoStyle
                       << "[Info] "
                       << "Download with single connection"
                       << " Speed: "
@@ -173,7 +193,7 @@ static void SingleConnectionDownload(const AddressInfo &address, const std::stri
                               )
                       )
                       << "/s"
-                      << "\033[0m"
+                      << kCleanStyle
                       << std::endl;
             last_time = time;
             last_downloaded = 0;
@@ -189,7 +209,8 @@ static void MultiConnectionDownload(const AddressInfo &address, const std::strin
     int epoll_fd = wrapper::EpollCreate();
     http::Request req = request;
     std::vector<std::shared_ptr<Worker>> workers(static_cast<size_t>(connection_number));
-    LengthController controller(size, 128 * 1024); // Minimal size 128 kiB
+    LengthController controller(size, 1024 * 1024);
+
     auto events = new struct epoll_event[connection_number];
     do {
         for (std::shared_ptr<Worker> &worker : workers) {
@@ -207,7 +228,7 @@ static void MultiConnectionDownload(const AddressInfo &address, const std::strin
                               << "\"Range\" " << ": \"" + req["Range"] << "\"" << std::endl;
                     worker = std::make_shared<Worker>(epoll_fd, address, scheme, req, file, begin);
                     controller.add(worker.get());
-                    std::cout << "\033[1m[Info] New worker created\033[0m" << std::endl;
+                    std::cout << kInfoStyle << "[Info] New worker created" << kCleanStyle << std::endl;
                     //controller.debugInfo(std::cout);
                 }
             }
@@ -242,7 +263,7 @@ static void MultiConnectionDownload(const AddressInfo &address, const std::strin
         auto time = std::chrono::system_clock::now();
         if ( (time - last_time) >= std::chrono::milliseconds(250)) {
             off_t remain = controller.remain();
-            std::cout << "\033[1m"
+            std::cout << kInfoStyle
                       << "[Info] "
                       << "Connections: " << controller.workerNumber()
                       << " Remain: " << BytesCountToHumanReadable(static_cast<std::size_t>(remain))
@@ -253,7 +274,7 @@ static void MultiConnectionDownload(const AddressInfo &address, const std::strin
                               )
                       )
                       << "/s"
-                      << "\033[0m"
+                      << kCleanStyle
                       << std::endl;
             last_time = time;
             last_remain = remain;

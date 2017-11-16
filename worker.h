@@ -8,6 +8,8 @@
 
 namespace cld {
 
+static constexpr std::size_t kBufferSize = 1024 * 1024;
+
 class Worker {
 public:
     Worker(int epoll_fd, const AddressInfo &address, const std::string &scheme,
@@ -37,7 +39,7 @@ private:
 
     std::vector<std::byte> response_data;
     char last_char;
-    std::shared_ptr<http::Buffer<>> buffer;
+    std::shared_ptr<http::Buffer<kBufferSize>> buffer;
 
     int file;
     off_t file_offset;

@@ -73,6 +73,7 @@ void SslStream::close() {
 
 void SslStream::shutdown(int how) {
     // do nothing
+    (void)how;
 }
 
 bool SslStream::opened() const {
@@ -93,31 +94,41 @@ bool SslStream::closed() const {
 }
 
 std::size_t SslStream::read(std::byte *buf, std::size_t size) {
-    do {
-        int res = SSL_read(ssl, buf, static_cast<int>(size));
-        if (res <= 0) {
-            if (SSL_get_error(ssl, res) == SSL_ERROR_WANT_READ) {
-                continue;
-            } else {
-                throw std::runtime_error("SSL error");
+    while (true) {
+        int read_count;
+        if ((read_count = SSL_read(ssl, buf, static_cast<int>(size))) < 0) {
+            switch (SSL_get_error(ssl, read_count)) {
+                case SSL_ERROR_NONE:
+                case SSL_ERROR_ZERO_RETURN:
+                    return 0;
+                case SSL_ERROR_WANT_READ:
+                    throw StreamException(StreamException::Exception::kAgain);
+                case SSL_ERROR_WANT_WRITE:
+                default:
+                    throw std::runtime_error("SSL error");
             }
         }
-        return static_cast<std::size_t>(res);
-    } while (true);
+        return static_cast<std::size_t>(read_count);
+    }
 }
 
 std::size_t SslStream::write(const std::byte *buf, std::size_t size) {
-    do {
-        int res = SSL_write(ssl, buf, static_cast<int>(size));
-        if (res <= 0) {
-            if (SSL_get_error(ssl, res) == SSL_ERROR_WANT_WRITE) {
-                continue;
-            } else {
-                throw std::runtime_error("SSL error");
+    while (true) {
+        int write_count;
+        if ((write_count = SSL_write(ssl, buf, static_cast<int>(size))) < 0) {
+            switch (SSL_get_error(ssl, write_count)) {
+                case SSL_ERROR_NONE:
+                case SSL_ERROR_ZERO_RETURN:
+                    return 0;
+                case SSL_ERROR_WANT_WRITE:
+                    throw StreamException(StreamException::Exception::kAgain);
+                case SSL_ERROR_WANT_READ:
+                default:
+                    throw std::runtime_error("SSL error");
             }
         }
-        return static_cast<std::size_t>(res);
-    } while (true);
+        return static_cast<std::size_t>(write_count);
+    }
 }
 
 } // namespace cld::transport

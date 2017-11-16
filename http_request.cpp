@@ -13,7 +13,10 @@ namespace cld::http {
 
 void WriteRequest(const Request &request, transport::Stream &stream) {
     auto data = request.request();
-    stream.write(data.data(), data.size());
+    std::size_t written = 0;
+    do {
+        written += stream.write(data.data() + written, data.size() - written);
+    } while (written < data.size());
 }
 
 const std::string Request::kHttpVersion("1.1");

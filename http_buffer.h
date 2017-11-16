@@ -21,7 +21,8 @@ public:
     Buffer() : data_(), end_(data_.data()) { }
 
     // return value indicates if the body is unfinished, maintain end_
-    virtual bool read(transport::Stream &stream) = 0;
+    virtual void read(transport::Stream &stream) = 0;
+    virtual bool finished() = 0;
 
     std::array<std::byte, S> &data() { return data_; };
     const std::array<std::byte, S> &data() const { return data_; };
@@ -41,24 +42,38 @@ protected:
 template <std::size_t S = 4096>
 class NoLengthBuffer : public Buffer<S> {
 public:
-    bool read(transport::Stream &stream) override {
+    NoLengthBuffer() : finished_(false) { }
+
+    void read(transport::Stream &stream) override {
         std::size_t read_count = stream.read(this->data_.data(), this->data_.size());
         this->end_ = this->data_.data() + read_count;
-        return read_count != 0;
+        if (read_count == 0)
+            finished_ = true;
     }
+
+    bool finished() override {
+        return finished_;
+    }
+
+private:
+    bool finished_;
 };
 
 template <std::size_t S = 4096>
 class FixLengthBuffer : public Buffer<S> {
 public:
     explicit FixLengthBuffer(std::size_t size) : remain_(size) {}
-    bool read(transport::Stream &stream) override {
+    void read(transport::Stream &stream) override {
         std::size_t read_count = stream.read(this->data_.data(),
             std::min(remain_, this->data_.size()));
         this->end_ = this->data_.data() + read_count;
         remain_ -= read_count;
-        return remain_ != 0;
     }
+
+    bool finished() override {
+        return remain_ == 0;
+    }
+
 private:
     std::size_t remain_;
 };
@@ -67,7 +82,7 @@ template <std::size_t S = 4096>
 class ChunkedBuffer : public Buffer<S> {
 public:
     ChunkedBuffer() : chunk_remain_(-1) {}
-    bool read(transport::Stream &stream) override {
+    void read(transport::Stream &stream) override {
         std::vector<std::byte> temp;
         std::string chunk_head;
         char c;
@@ -102,18 +117,18 @@ public:
             if (chunk_remain_ == 0) {
                 chunk_remain_ = -1;
             }
-            return true;
         }
 
         if (chunk_remain_ == 0) {
             this->end_ = this->data_.data();
-            return false;
         }
 
-        throw std::runtime_error("Unreachable code in chunked buffer");
-//        // if don't finish chunk header
-//        this->end_ = this->data_.data(); // no data
-//        return true;
+        // if don't finish chunk header
+        this->end_ = this->data_.data(); // no data
+    }
+
+    bool finished() override {
+        return chunk_remain_ == 0;
     }
 
 private:

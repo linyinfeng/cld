@@ -16,8 +16,8 @@ extern std::shared_ptr<Stream> CreateStream(const std::string &scheme, const Add
 // A network TcpTcpStream with a seperated buffer
 class Stream {
 public:
-    Stream() { }
-    virtual ~Stream() { };
+    Stream() = default;
+    virtual ~Stream() = default;
 
     virtual std::size_t write(const std::byte *buf, std::size_t size) = 0;
     virtual std::size_t read(std::byte *buf, std::size_t count) = 0;
@@ -30,6 +30,14 @@ public:
     virtual bool closed() const = 0;
 
     virtual int getFileDescriptor() = 0;
+};
+
+class StreamException {
+public:
+    enum class Exception {
+        kAgain
+    } exception;
+    explicit StreamException(Exception e) : exception(e) { }
 };
 
 } // namespace cld::transport

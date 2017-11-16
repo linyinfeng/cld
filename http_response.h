@@ -12,6 +12,7 @@ namespace cld::http {
 
 class Response;
 
+// Must be called when stream are blocking
 extern Response ReadToResponse(transport::Stream &stream);
 
 class Response {

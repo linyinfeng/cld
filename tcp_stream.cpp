@@ -70,46 +70,38 @@ bool TcpStream::closed() const
 
 std::size_t TcpStream::read(std::byte *buf, std::size_t size) {
     if (fd == -1) throw std::runtime_error("Read from closed stream");
-    std::size_t left = size;
-    while (left > 0) {
+    while (true) {
         ssize_t read_count;
-        if ((read_count = ::read(fd, buf, left)) <= 0) {
+        if ((read_count = ::read(fd, buf, size)) < 0) {
             if (errno == EINTR) {
-                continue;
+                continue; // retry
             } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                break;
+                throw StreamException(StreamException::Exception::kAgain);
             } else {
                 throw std::system_error(errno, std::system_category());
             }
         }
-        else if (read_count == 0) {
-            break;
-        }
-        left -= read_count;
-        buf += read_count;
+        return static_cast<std::size_t>(read_count);
     }
-    return size - left;
 }
 
 std::size_t TcpStream::write(const std::byte *buf, std::size_t size) {
-    if (fd == -1) throw std::runtime_error("Write to closed stream");
-    std::size_t left = size;
-    const std::byte *p = buf;
-    while (left > 0) {
-        ssize_t written;
-        if ((written = ::write(fd, p, left)) < 0) {
+    if (fd == -1) throw std::runtime_error("Read from closed stream");
+    while (true) {
+        ssize_t write_count;
+        if ((write_count = ::write(fd, buf, size)) < 0) {
+            // Blocking
             if (errno == EINTR) {
-                continue;
+                continue; // retry
+            // Non-blocking
             } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                break;
+                throw StreamException(StreamException::Exception::kAgain);
             } else {
                 throw std::system_error(errno, std::system_category());
             }
         }
-        left -= written;
-        p += written;
+        return static_cast<std::size_t>(write_count);
     }
-    return static_cast<std::size_t>(p - buf);
 }
 
 void TcpStream::shutdown(int how) {

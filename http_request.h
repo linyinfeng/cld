@@ -15,6 +15,7 @@ namespace cld::http {
 
 class Request;
 
+// Must be called when stream are blocking
 extern void WriteRequest(const Request &request, transport::Stream &stream);
 
 class Request {
