@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 project(Cld)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-g -Wall -Werror -Wextra -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "-Wall -Werror -Wextra -Wno-unused-parameter")
 
 add_executable(
     cld
@@ -43,3 +43,4 @@ add_executable(
 
 find_package(OpenSSL REQUIRED)
 target_link_libraries(cld ${OPENSSL_LIBRARIES})
+target_link_libraries(cld profiler)

@@ -14,7 +14,7 @@ Worker::Worker(int epoll_fd, const AddressInfo &address, const std::string &sche
     stream = transport::CreateStream(scheme, address, false);
 
     struct epoll_event event{};
-    event.events = EPOLLOUT | EPOLLERR;
+    event.events = EPOLLIN | EPOLLOUT | EPOLLERR;
     event.data.ptr = reinterpret_cast<void *>(this);
     wrapper::EpollControl(epoll_fd, EPOLL_CTL_ADD, stream->getFileDescriptor(), &event);
 }
@@ -23,12 +23,27 @@ std::size_t Worker::process(uint32_t event) {
     std::size_t file_read_count = 0;
 
     if (state == State::Connecting) {
-        if (event & EPOLLOUT) {
-            if (stream->opened()) {
-                state = State::Sending;
-            } else {
+        if (event & EPOLLOUT || event & EPOLLIN) {
+            try {
+                if (stream->continueConnect()) {
+                    state = State::Connecting;
+                    return 0;
+                } else {
+                    state = State::Sending;
+                    struct epoll_event new_event{};
+                    new_event.events = EPOLLOUT | EPOLLERR;
+                    new_event.data.ptr = reinterpret_cast<void *>(this);
+                    wrapper::EpollControl(epoll_fd, EPOLL_CTL_MOD, stream->getFileDescriptor(), &new_event);
+                }
+            } catch (std::exception &e) {
+                std::cout << "[Debug] Failed to connect: " << e.what() << std::endl;
                 state = State::Stopped;
             }
+//            if (stream->opened()) {
+//                state = State::Sending;
+//            } else {
+//                state = State::Stopped;
+//            }
         }
     }
     if (state == State::Sending) {

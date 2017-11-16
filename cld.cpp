@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
+#include <thread>
 #include "address_info.h"
 #include "buffer.h"
 #include "stream.h"
@@ -203,7 +204,7 @@ static void SingleConnectionDownload(const AddressInfo &address, const std::stri
 
 static void MultiConnectionDownload(const AddressInfo &address, const std::string &scheme,
                              const http::Request &request, int file, std::size_t size, int connection_number) {
-    auto last_time = std::chrono::system_clock::now();
+    auto last_time = std::chrono::system_clock::now(), time = last_time;
     off_t last_remain = size;
 
     int epoll_fd = wrapper::EpollCreate();
@@ -213,26 +214,31 @@ static void MultiConnectionDownload(const AddressInfo &address, const std::strin
 
     auto events = new struct epoll_event[connection_number];
     do {
-        for (std::shared_ptr<Worker> &worker : workers) {
-            if (worker != nullptr && worker->getState() == Worker::State::Stopped) {
-                // clean
-                controller.workerStopped(worker.get());
-                worker.reset();
-            }
-            if (worker == nullptr) {
-                off_t begin, end;
-                std::tie(begin, end) = controller.next();
-                if (end - begin != 0) {
-                    req["Range"] = "bytes=" + std::to_string(begin) + "-" + std::to_string(end);
-                    std::cout << "[Debug] Change request range header to "
-                              << "\"Range\" " << ": \"" + req["Range"] << "\"" << std::endl;
-                    worker = std::make_shared<Worker>(epoll_fd, address, scheme, req, file, begin);
-                    controller.add(worker.get());
-                    std::cout << kInfoStyle << "[Info] New worker created" << kCleanStyle << std::endl;
-                    //controller.debugInfo(std::cout);
+        if (time == last_time) {
+            // if start or information printed
+            for (std::shared_ptr<Worker> &worker : workers) {
+                if (worker != nullptr && worker->getState() == Worker::State::Stopped) {
+                    // clean
+                    std::cout << kInfoStyle << "[Info] Worker stopped" << kCleanStyle << std::endl;
+                    controller.workerStopped(worker.get());
+                    worker.reset();
+                }
+                if (worker == nullptr) {
+                    off_t begin, end;
+                    std::tie(begin, end) = controller.next();
+                    if (end - begin != 0) {
+                        req["Range"] = "bytes=" + std::to_string(begin) + "-" + std::to_string(end);
+                        std::cout << "[Debug] Change request range header to "
+                                  << "\"Range\" " << ": \"" + req["Range"] << "\"" << std::endl;
+                        worker = std::make_shared<Worker>(epoll_fd, address, scheme, req, file, begin);
+                        controller.add(worker.get());
+                        std::cout << kInfoStyle << "[Info] New worker created" << kCleanStyle << std::endl;
+                        //controller.debugInfo(std::cout);
+                    }
                 }
             }
         }
+
         int count = wrapper::EpollWait(epoll_fd, events, connection_number, 1000); // 1 second timeout
         for (int i = 0; i < count; ++i) {
             auto worker = static_cast<Worker *>(events[i].data.ptr);
@@ -260,12 +266,14 @@ static void MultiConnectionDownload(const AddressInfo &address, const std::strin
             }
         }
 
-        auto time = std::chrono::system_clock::now();
+        time = std::chrono::system_clock::now();
         if ( (time - last_time) >= std::chrono::milliseconds(250)) {
             off_t remain = controller.remain();
             std::cout << kInfoStyle
                       << "[Info] "
                       << "Connections: " << controller.workerNumber()
+                      << " Progress: " << std::setiosflags(std::ios::fixed) << std::setprecision(2)
+                      << static_cast<double>(size - remain) / size * 100 << '%'
                       << " Remain: " << BytesCountToHumanReadable(static_cast<std::size_t>(remain))
                       << " Speed: "
                       << BytesCountToHumanReadable(

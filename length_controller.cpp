@@ -7,6 +7,7 @@ LengthController::LengthController(off_t size, off_t min)
         : min(min), length_monitor{ {0, size - 1, nullptr} } { }
 
 std::tuple<off_t, off_t> LengthController::next() {
+    length_monitor.sort();
     Fragment f = length_monitor.back();
     if (f.worker != nullptr) {
         if ((f.end - f.begin) / 2 > static_cast<off_t>(min))
@@ -19,6 +20,7 @@ std::tuple<off_t, off_t> LengthController::next() {
 }
 
 void LengthController::add(const Worker *worker) {
+    length_monitor.sort();
     Fragment &f = length_monitor.back();
     if (f.worker != nullptr) {
         if ((f.end - f.begin) / 2 > static_cast<off_t>(min)) {
@@ -34,7 +36,6 @@ void LengthController::add(const Worker *worker) {
         node_finder[worker] = &length_monitor.back();
 
     }
-    length_monitor.sort();
 }
 
 bool LengthController::afterRead(const Worker *worker) {
@@ -44,10 +45,8 @@ bool LengthController::afterRead(const Worker *worker) {
         std::cout << "[Debug] Controller report worker " << worker << " finished" << std::endl;
         length_monitor.remove(*f); // finish worker's fragment
         node_finder.erase(worker);
-        length_monitor.sort();
         return false; // require stop read
     } else {
-        length_monitor.sort();
         return true;
     }
 }
@@ -62,7 +61,6 @@ void LengthController::workerStopped(const Worker *worker) {
             f->worker = nullptr;
         }
         node_finder.erase(worker);
-        length_monitor.sort();
     } catch (std::out_of_range &e) {
         std::cout << "[Debug] Stopping of worker " << worker << " confirmed" << std::endl;
     }

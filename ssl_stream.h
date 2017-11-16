@@ -16,6 +16,7 @@ public:
 
     // ssl connect will block the thread
     void connect(const AddressInfo &address, bool blocking) override;
+    bool continueConnect() override;
     void close() override;
     void shutdown(int how) override;
 
@@ -30,6 +31,8 @@ public:
 private:
     static bool initialized;
     static void initialize();
+
+    bool connected;
 
     SSL_CTX *ctx;
     SSL *ssl;

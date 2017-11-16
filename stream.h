@@ -23,6 +23,8 @@ public:
     virtual std::size_t read(std::byte *buf, std::size_t count) = 0;
 
     virtual void connect(const AddressInfo &address, bool blocking) = 0;
+    // return value indicate if should continue connect, only useful in non-blocking mode
+    virtual bool continueConnect() = 0;
     virtual void close() = 0;
     virtual void shutdown(int how) = 0;
 

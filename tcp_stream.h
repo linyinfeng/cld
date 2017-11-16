@@ -15,6 +15,7 @@ public:
     ~TcpStream() override;
 
     void connect(const AddressInfo &address, bool blocking) override;
+    bool continueConnect() override;
     void close() override;
     void shutdown(int how) override;
 

@@ -15,6 +15,8 @@ void SslStream::initialize() {
 }
 
 SslStream::SslStream(const AddressInfo &address, bool blocking) {
+    connected = false;
+    ssl = nullptr;
     connect(address, blocking);
 }
 
@@ -24,23 +26,21 @@ void SslStream::connect(const AddressInfo &address, bool blocking) {
     for (const struct addrinfo &ai : address) {
         try {
             fd = wrapper::Socket(ai.ai_family, ai.ai_socktype, ai.ai_protocol);
-            wrapper::Connect(fd, ai.ai_addr, ai.ai_addrlen);
-            const SSL_METHOD* method = SSLv23_method();
-            if(method == nullptr) throw std::exception();
-            ctx = SSL_CTX_new(method);
-            if (ctx == nullptr) throw std::exception();
-//            SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
-            ssl = SSL_new(ctx);
-            if (ssl == nullptr) throw std::exception();
-            SSL_set_fd(ssl, fd);
-            if (SSL_connect(ssl) <= 0) throw std::exception();
 
             if (!blocking) {
+            // set non-blocking
                 int flags = fcntl(fd, F_GETFL);
                 if (flags == -1)
                     throw std::system_error(errno, std::system_category());
                 if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
                     throw std::system_error(errno, std::system_category());
+            }
+            if (::connect(fd, ai.ai_addr, ai.ai_addrlen) != 0 && errno != EINPROGRESS) {
+                throw std::system_error(errno, std::system_category());
+            }
+
+            if (blocking) {
+                continueConnect();
             }
             break;
         }
@@ -48,6 +48,37 @@ void SslStream::connect(const AddressInfo &address, bool blocking) {
             close();
             continue;
         }
+    }
+}
+
+
+bool SslStream::continueConnect() {
+    if (connected) return false;
+
+    if (ssl == nullptr) {
+        const SSL_METHOD *method = SSLv23_method();
+        if (method == nullptr) throw std::runtime_error("Failed to create SSL method");
+        ctx = SSL_CTX_new(method);
+        if (ctx == nullptr) throw std::runtime_error("Failed to create SSL context");
+        ssl = SSL_new(ctx);
+        if (ssl == nullptr) throw std::runtime_error("Failed to create SSL socket");
+        SSL_set_fd(ssl, fd);
+    }
+
+    int res = 0;
+    if ((res = SSL_connect(ssl)) != 1) {
+        auto err = SSL_get_error(ssl, res);
+        switch (err) {
+            case SSL_ERROR_WANT_READ:
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_WANT_CONNECT:
+                return true;
+            default:
+                throw std::runtime_error(std::string("Failed to connect with SSL: ") + ERR_error_string(err, nullptr));
+        }
+    } else {
+        connected = true;
+        return false;
     }
 }
 
@@ -77,7 +108,7 @@ void SslStream::shutdown(int how) {
 }
 
 bool SslStream::opened() const {
-    if (fd == -1) return false;
+    if (fd == -1 || !connected) return false;
     int result;
     socklen_t result_len = sizeof(result);
     if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0) {
@@ -102,8 +133,8 @@ std::size_t SslStream::read(std::byte *buf, std::size_t size) {
                 case SSL_ERROR_ZERO_RETURN:
                     return 0;
                 case SSL_ERROR_WANT_READ:
-                    throw StreamException(StreamException::Exception::kAgain);
                 case SSL_ERROR_WANT_WRITE:
+                    throw StreamException(StreamException::Exception::kAgain);
                 default:
                     throw std::runtime_error("SSL error");
             }
@@ -121,8 +152,8 @@ std::size_t SslStream::write(const std::byte *buf, std::size_t size) {
                 case SSL_ERROR_ZERO_RETURN:
                     return 0;
                 case SSL_ERROR_WANT_WRITE:
-                    throw StreamException(StreamException::Exception::kAgain);
                 case SSL_ERROR_WANT_READ:
+                    throw StreamException(StreamException::Exception::kAgain);
                 default:
                     throw std::runtime_error("SSL error");
             }
