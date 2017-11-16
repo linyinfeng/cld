@@ -11,26 +11,28 @@ set(CMAKE_CXX_FLAGS "-Wall -Werror -Wextra -Wno-unused-parameter")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
+set(SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
+
 add_executable(
     cld
-    address_info.cpp
-    cld.cpp
-    http_header.cpp
-    http_request.cpp
-    http_response.cpp
-    length_controller.cpp
-    main.cpp
-    options.cpp
-    ssl_stream.cpp
-    stream.cpp
-    tcp_stream.cpp
-    url.cpp
-    version.cpp
-    worker.cpp
-    wrapper.cpp
+    ${SRC_DIR}/address_info.cpp
+    ${SRC_DIR}/cld.cpp
+    ${SRC_DIR}/http_header.cpp
+    ${SRC_DIR}/http_request.cpp
+    ${SRC_DIR}/http_response.cpp
+    ${SRC_DIR}/length_controller.cpp
+    ${SRC_DIR}/main.cpp
+    ${SRC_DIR}/options.cpp
+    ${SRC_DIR}/ssl_stream.cpp
+    ${SRC_DIR}/stream.cpp
+    ${SRC_DIR}/tcp_stream.cpp
+    ${SRC_DIR}/url.cpp
+    ${SRC_DIR}/version.cpp
+    ${SRC_DIR}/worker.cpp
+    ${SRC_DIR}/wrapper.cpp
     )
 
-
+target_include_directories(cld PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 find_package(OpenSSL REQUIRED)
 target_link_libraries(cld ${OPENSSL_LIBRARIES})
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
