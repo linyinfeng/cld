@@ -1,5 +1,5 @@
-#ifndef HTTP_H_INCLUDED
-#define HTTP_H_INCLUDED
+#ifndef CLD_HTTP_H_INCLUDED
+#define CLD_HTTP_H_INCLUDED
 
 #include "http_header.h"
 #include "http_request.h"
