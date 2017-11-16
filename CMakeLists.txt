@@ -1,46 +1,41 @@
 cmake_minimum_required(VERSION 3.0)
 project(Cld)
 
+if(NOT CMAKE_BUILD_TYPE)
+    message("[Message] Set default build type to release")
+    set(CMAKE_BUILD_TYPE Release)
+endif(NOT CMAKE_BUILD_TYPE)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-Wall -Werror -Wextra -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 add_executable(
     cld
     address_info.cpp
-    address_info.h
-    buffer.h
     cld.cpp
-    cld.h
-    http.h
-    http_buffer.h
     http_header.cpp
-    http_header.h
     http_request.cpp
-    http_request.h
     http_response.cpp
-    http_response.h
     length_controller.cpp
-    length_controller.h
     main.cpp
     options.cpp
-    options.h
     ssl_stream.cpp
-    ssl_stream.h
     stream.cpp
-    stream.h
     tcp_stream.cpp
-    tcp_stream.h
     url.cpp
-    url.h
     version.cpp
-    version.h
     worker.cpp
-    worker.h
     wrapper.cpp
-    wrapper.h
     )
 
 
 find_package(OpenSSL REQUIRED)
 target_link_libraries(cld ${OPENSSL_LIBRARIES})
-target_link_libraries(cld profiler)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message("[Message] Debug mode, Link profiler")
+    target_link_libraries(cld profiler)
+endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cld DESTINATION bin)

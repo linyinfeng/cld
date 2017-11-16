@@ -48,9 +48,10 @@ void EpollControl(int epfd, int op, int fd, struct epoll_event *event) {
 }
 
 int EpollWait(int epfd, struct epoll_event *events, int maxevents, int timeout) {
-    int res = epoll_wait(epfd, events, maxevents, timeout);
-    if (res == -1)
-        throw std::system_error(errno, std::system_category());
+    int res;
+    do {
+        res = epoll_wait(epfd, events, maxevents, timeout);
+    } while (res < 0 && errno == EINTR);
     return res;
 }
 
