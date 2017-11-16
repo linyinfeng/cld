@@ -209,7 +209,7 @@ static void MultiConnectionDownload(const AddressInfo &address, const std::strin
     int epoll_fd = wrapper::EpollCreate();
     http::Request req = request;
     std::vector<std::shared_ptr<Worker>> workers(static_cast<size_t>(connection_number));
-    LengthController controller(size, 1024 * 1024);
+    LengthController controller(size, 128 * 1024);
 
     auto events = new struct epoll_event[connection_number];
     do {
