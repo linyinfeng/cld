@@ -41,5 +41,5 @@ to get help
 
 The project is a homework of my Linux course, written in only one week.
 So many codes may be confusing and lacking comments because of tight development.
-I will keep maintaining the it.
+I will keep maintaining it.
 
